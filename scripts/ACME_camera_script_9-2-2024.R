@@ -218,7 +218,9 @@ levels(OSM_2022_data_fixed$site)
 
 # Data checks deployment data ---------------------------------------------
 
-str(deploy)
+
+# Data manipulation deployment data ---------------------------------------
+
 
 
 # Data visualization ------------------------------------------------------
