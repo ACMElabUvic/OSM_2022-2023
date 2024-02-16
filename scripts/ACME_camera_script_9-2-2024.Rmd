@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
-## Before you begin
+# Before you begin
 
 A few notes about this script.
 
@@ -33,33 +33,29 @@ School of Environmental Studies
 Email: [marissadyck@uvic.ca](mailto:marissadyck@uvic.ca)     
 
 
-## Install packages
+# Install packages
 
 If you don't already have the following packages installed, use the code below to install them.
 
 ```{r install packages, eval=FALSE}
-
-# install packages ----------------------
 
 install.packages(tidyverse) # data tidying, visualization, much more
 install.packages(withr) # used to temporarily set wd
 ```
 
 
-## Load libraries
+# Load libraries
 
 Then load the packages to your library.
 
 ```{r libraries}
-
-# libraries ----------------------
 
 library(tidyverse) # will load all tidyverse packages, can see complete list using tidyverse_packages()
 library(withr)
 ```
 
 
-## Import data
+# Timelapse data
 
 If you opened the OSM_2022-2023.Rproj file you should have your working directory set to the GitHub repository that you downloaded to your hard drive.
 
@@ -68,17 +64,16 @@ We need to temporarily set your working drive to the ACME lab Netdrive to import
 Helpful instructions for connecting to and navigating the Netdrive can also be found here: [https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit ](https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit).
 
 
-### Timelapse data option 1
+## Import timelapse data 
 
+### Option 1
 This code will import all of the timelapse data files and merge them into one data frame.
 
 Make a list of all the data files and use `map_drf()` to read them in and join them to one data frame (map is a function in the *purrr* package that performs iterations and map_dfr returns data frames by row-binding objects together).
 
 ```{r import timelapse data option 1, message=FALSE, warning=FALSE}
-# import data -------------------------------------------------------
 
 # temporarily set the working directory to import from the NetDrive
-
 with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
          
          # make a list of all .csv files in the 2. Timelapse Files folder
@@ -122,14 +117,13 @@ with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
 This code will return warnings related to 'parsing issues'. Don't panic, it is fine.
 
 
-### Timelapse files option 2
+### Option 2
+
 This code is probably not that useful but I spent a bit of time figuring out how to make it work before I fixed the code for option 1 so I have kept it here in case it is of use to someone in the future.
 
 This will read in all the data files as separate data frames in a list and name them based on the file names (e.g. the landscape units for 2022-2023 data).
 
 ```{r import timelapse data option 2, message=FALSE, warning=FALSE}
-
-# Timelapse files option 2 ----------------------------------------------------------------
 
 # option two: read files in as a list and keep them separated by landscape unit (LU). This is useful if you want to do something with the separate files, but otherwise option one is probably better
 
@@ -149,90 +143,8 @@ with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
 ```
 
 
-### Covariate data
 
-These data files have a similar format so we will read them in together using the `map()` function in the *purrr* package. Reminder, the `map()` function let's us perform iterations. The `~x` after the function is a placeholder that refers to the data before the last pipe (e.g. the .csv files we supplied) and all operations within the `map()` will be performed on all of these objects. 
-
-```{r import covariate data}
-# Import covariate data ----------------------------------------------------------
-
-# these data files have a similar format so we will read them in together using the map() function in the purrr package
-
-covariate_data <-    
-  # provide file path (e.g. folders to find the data)
-  file.path('data/raw',
-            
-            # provide the file names
-            c('OSM_LU01_LU13_LU15_LU21_HFI_2022.csv',
-              'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv')) %>%
-  
-  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
-  map(~.x %>%
-        read_csv(.,
-                 
-                 # specify how to read in the various columns
-                 col_types = cols(Site = col_factor(),
-                                  BUFF_DIST = col_integer(),
-                                  .default = col_number())) %>%
-        
-        # set the column names to lower case
-        set_names(
-          names(.) %>%
-            tolower())) %>%
-  
-  # set the names of the two files in the list outside of the map function, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
-  purrr::set_names('HFI',
-                   'VEG')
-
-# will get a warning about parsing issues, don't panic it is fine
-
-```
-
-
-### Deployment data 
-Although we could read both of these files in as a list similar to the covariate data, they are more different and I want to perform a few cleaning operations that are different for each during the data import step so it is easier to import them separately
-
-```{r import deployment data}
-
-# Import deployment data --------------------------------------------
-
-# read in data files individually 
-
-# deployment data
-deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
-                   
-                   # specify how we want the columns read in 
-                   col_types = cols(Project.ID = col_factor(),
-                                    Deployment.Location.ID = col_factor(),
-                                    .default = col_character())
-                   # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
-                   ) %>% 
-  
-  # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
-  set_names(
-    names(.) %>% 
-      tolower() %>% 
-      
-      # replace the '.' with '_'
-      str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
-                  replacement = '_')) # what you want the pattern to be replaced with
-
-
-# deployment site data
-deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
-  
-  # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
-  set_names(
-    names(.) %>% 
-      tolower()%>% 
-      str_replace_all(pattern = ' ',
-                      replacement = '_'))
-
-
-```
-
-
-## Data checks timelapse data
+## Data checks
 
 This section will likely need to be altered and amended each year as various year-specific issues with the data arise, but the functions in this section offer a good starting point to take a look at the data and ensure things imported correctly.
 
@@ -308,7 +220,8 @@ OSM_2022_data %>%
 It looks like there was one entry with an NA for the site column but it wasn't associated with an image of an animal so there's really no need to fix it or remove it at this point.
 
 
-## Data manipulation timelapse data
+
+## Data manipulation 
 
 The following code will fix any data issues we found in the data check steps. This code will need to be modified each year as well as year-specific and R version specific issues arise but this provides a good starting point.
 
@@ -327,10 +240,20 @@ OSM_2022_data_fixed <- OSM_2022_data %>%
             dark,
             ...38)) %>% 
   
-  # fix site entry with unnecessary space
-  mutate(site = recode(site,
-                       'LU 01-71' = 'LU01-71')) # old entry followed by new entry
-
+  # fix issues with site column 
+  mutate(
+    # fix site entry with unnecessary space
+    site = recode(site,
+                  # old entry followed by new entry
+                  'LU 01-71' = 'LU01-71'), 
+    
+    # change format of sites to include '_' instead of '-'
+    site = str_replace(site,
+                       pattern = '\\-',
+                       replacement = '_'),
+    
+    # site needs to be a factor and for some reason the code above changes it to a character
+    site = as.factor(site)) 
 
 # use code below  to check that each step worked
 
@@ -343,8 +266,6 @@ levels(OSM_2022_data_fixed$site)
 
 ```
 
-## Save clean timelapse data
-
 In case someone wants all of the timelapse data without the issues we fixed in the data manipulation section we should save this to a folder so we don't have to run the code again.
 
 ```{r save timelapse, eval=FALSE}
@@ -356,6 +277,7 @@ write_csv(OSM_2022_data_fixed,
           'data/processed/OSM_2022_timelapse.csv')
 
 ```
+
 
 ## Independent detections
 
@@ -449,7 +371,9 @@ write_csv(OSM_2022_det_indv,
 ```
 
 
-## Data visualization detections
+## Graphs
+
+### Indpendent detections for mammals
 
 Now lets create a few quick figures to look at the detection data
 
@@ -481,7 +405,7 @@ mammals <- c('White-tailed deer',
              'Long-tailed weasel')
 
 # remove NAs and select just images with mammals first then pipe new data into ggplot
-OSM_2022_det_indv %>% 
+det_graph <- OSM_2022_det_indv %>% 
   
   # remove less useful species
   filter(species %in% mammals) %>% 
@@ -517,10 +441,125 @@ OSM_2022_det_indv %>%
         axis.ticks.x = element_blank(),
         panel.grid = element_blank()) 
 
-# idk why ggplot is not plotting the species names in alphabetical order like its default setting should do, it is bugging me but I'll deal with this later
+# print graph
+det_graph
+
 
 ```
 
-## Data checks covariate data
+Let's also save this graph in case we want to look at it later without running all the code
 
-### 
+```{r save det_graph, eval=FALSE}
+
+# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+ggsave('2022_indv_det_graph.jpeg',
+       det_graph,
+       path = 'outputs',
+       width = 12,
+       height = 10,
+       units = 'in',
+       dpi = 600)
+
+```
+
+
+# Covariate data
+
+## Import covaraite data
+These data files have a similar format so we will read them in together using the `map()` function in the *purrr* package. Reminder, the `map()` function let's us perform iterations. The `~.x` after the function is a placeholder that refers to the data before the last pipe (e.g. the .csv files we supplied) and all operations within the `map()` will be performed on all of these objects. 
+
+```{r import covariate data}
+
+# these data files have a similar format so we will read them in together using the map() function in the purrr package
+
+covariate_data <-    
+  # provide file path (e.g. folders to find the data)
+  file.path('data/raw',
+            
+            # provide the file names
+            c('OSM_LU01_LU13_LU15_LU21_HFI_2022.csv',
+              'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv')) %>%
+  
+  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
+  map(~.x %>%
+        read_csv(.,
+                 
+                 # specify how to read in the various columns
+                 col_types = cols(Site = col_factor(),
+                                  BUFF_DIST = col_integer(),
+                                  .default = col_number())) %>%
+        
+        # set the column names to lower case
+        set_names(
+          names(.) %>%
+            tolower())) %>%
+  
+  # set the names of the two files in the list outside of the map function, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
+  purrr::set_names('HFI',
+                   'VEG')
+
+# will get a warning about parsing issues, don't panic it is fine
+
+```
+
+## Data checks 
+
+### strucutre
+
+even though we set some of the columns to read in as a specific type in the data import step it's always a good idea to check internal structure. We can do this for both data files using purrr::map
+
+```{r covaraites str}
+
+covariate_data %>% 
+  
+  # apply str() function inside map()
+  map(~.x %>% 
+        str(.))
+
+```
+
+
+# Deployment data
+
+## Import deployment data
+Although we could read both of these files in as a list similar to the covariate data, they are more different and I want to perform a few cleaning operations that are different for each during the data import step so it is easier to import them separately
+
+```{r import deployment data}
+
+
+# read in data files individually 
+
+# deployment data
+deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
+                   
+                   # specify how we want the columns read in 
+                   col_types = cols(Project.ID = col_factor(),
+                                    Deployment.Location.ID = col_factor(),
+                                    .default = col_character())
+                   # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
+                   ) %>% 
+  
+  # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower() %>% 
+      
+      # replace the '.' with '_'
+      str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
+                  replacement = '_')) # what you want the pattern to be replaced with
+
+
+# deployment site data
+deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
+  
+  # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower()%>% 
+      str_replace_all(pattern = ' ',
+                      replacement = '_'))
+
+
+```
+
+## Data checks

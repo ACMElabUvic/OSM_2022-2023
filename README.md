@@ -15,7 +15,7 @@ Visit the [ACME website](http://www.acmelab.ca/osm2022.html) more information ab
  Address: 3800 Finnerty Rd, Victoria, BC V8P 5C2  
  Email: [fisherj@uvic.ca](mailto:fisherj@uvic.ca) 
 
-**Author Information (code):** 
+**Author Information (code):**  
 Data Analysis Contact Information  
 		Name: Marissa A. Dyck  
 		Institution: University of Victoria   
@@ -30,8 +30,12 @@ Data Analysis Contact Information
 ### DATA & FILE OVERVIEW
 
 **File List:**  
+
+*Files in main folder*
 		
 * <span style = "color: #7B0F17;">**OSM_2022-2023.Rproj**</span>; R project to run code for data cleaning and analyses. 
+
+*Files in data folder*
 
 * <span style = "color: #7B0F17;">**data/raw/OSM_2022_Deployment_Data.csv**</span>; contains raw data pertaining to the deployment location, data, time, and functionality of the cameras used in the project.  
 

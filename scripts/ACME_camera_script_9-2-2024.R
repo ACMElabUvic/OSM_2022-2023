@@ -18,7 +18,9 @@ library(tidyverse) # will load all tidyverse packages, can see complete list usi
 library(withr)
 
 
-# Import timelapse files option 1 ----------------------------------------------------------------
+# Timelapse data ----------------------------------------------------------
+
+# Import timelapse files option 1 ----------------------------------------------
 
 # option one: read all files in and join them in the same step using map_dfr (map is a purrr function that performs iterations and map_dfr returns data frames by row-binding objects together)
 
@@ -64,7 +66,7 @@ with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
 
 
 
-# Import timelapse files option 2 ----------------------------------------------------------------
+# Import timelapse files option 2 ------------------------------------------------------
 
 # option two: read files in as a list and keep them separated by landscape unit (LU). This is useful if you want to do something with the separate files, but otherwise option one is probably better
 
@@ -78,77 +80,6 @@ OSM_2022_data_files <- list.files(
   {setNames(map(., read_csv), sub("\\.csv$", "", basename(.)))}
 
 
-
-# Import covariate data ----------------------------------------------------------
-
-# these data files have a similar format so we will read them in together using the map() function in the purrr package
-
-covariate_data <-    
-  # provide file path (e.g. folders to find the data)
-  file.path('data/raw',
-            
-            # provide the file names
-            c('OSM_LU01_LU13_LU15_LU21_HFI_2022.csv',
-              'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv')) %>%
-  
-  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
-  map(~.x %>%
-        read_csv(.,
-                 
-                 # specify how to read in the various columns
-                 col_types = cols(Site = col_factor(),
-                                  BUFF_DIST = col_integer(),
-                                  .default = col_number())) %>%
-        
-        # set the column names to lower case
-        set_names(
-          names(.) %>%
-            tolower())) %>%
-  
-  # set the names of the two files in the list, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
-  purrr::set_names('HFI',
-                   'VEG')
-
-# will get a warning about parsing issues, don't panic it is fine
-
-
-# Import deployment data --------------------------------------------
-
-# read in data files individually 
-
-# deployment data
-deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
-                   
-                   # specify how we want the columns read in 
-                   col_types = cols(Project.ID = col_factor(),
-                                    Deployment.Location.ID = col_factor(),
-                                    .default = col_character())
-                   # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
-                   ) %>% 
-  
-  # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
-  set_names(
-    names(.) %>% 
-      tolower() %>% 
-      
-      # replace the '.' with '_'
-      str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
-                  replacement = '_')) # what you want the pattern to be replaced with
-
-
-# deployment site data
-deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
-  
-  # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
-  set_names(
-    names(.) %>% 
-      tolower()%>% 
-      str_replace_all(pattern = ' ',
-                      replacement = '_'))
-
-
-
-
 # Data checks timelapse data -------------------------------------------------------------
 
 # check the internal structure
@@ -160,7 +91,7 @@ str(OSM_2022_data) # this should all be good since we specified how to read in e
 levels(OSM_2022_data$site) 
 
 # need to fix entry LU 01-71 to LU01-71 (has unnecessary space)
-
+# also all the other data frames use '_' not '-' for the site names so we should change this in the timelapse data
 
 # check that all the species names were entered correctly
 levels(OSM_2022_data$species)
@@ -179,8 +110,7 @@ OSM_2022_data %>%
 
 
 
-
-# Data manipulation timelapse data -------------------------------------------------
+# Data manipulation Timelapse data -------------------------------------------------
 
 # can add code/remove code within the code chunk below to fix any issues that were found from the data check steps each year
 
@@ -192,9 +122,20 @@ OSM_2022_data_fixed <- OSM_2022_data %>%
             dark,
             ...38)) %>% 
   
-  # fix site entry with unnecessary space
-  mutate(site = recode(site,
-                       'LU 01-71' = 'LU01-71')) # old entry followed by new entry
+  # fix issues with site column 
+  mutate(
+    # fix site entry with unnecessary space
+    site = recode(site,
+                  # old entry followed by new entry
+                  'LU 01-71' = 'LU01-71'), 
+    
+    # change format of sites to include '_' instead of '-'
+    site = str_replace(site,
+                       pattern = '\\-',
+                       replacement = '_'),
+    
+    # site needs to be a factor and for some reason the code above changes it to a character
+    site = as.factor(site)) 
 
 
 # use code below  to check that each step worked
@@ -206,11 +147,10 @@ names(OSM_2022_data_fixed)
 levels(OSM_2022_data_fixed$site)
 
 
-# Save clean timelapse data -----------------------------------------------
-
-# if someone needs this data later
+# Save clean full timelapse data if someone needs this data later
 write_csv(OSM_2022_data_fixed,
           'data/processed/OSM_2022_timelapse.csv')
+
 
 
 
@@ -233,8 +173,8 @@ write_csv(OSM_2022_data_fixed,
 #   
 #   mutate(species = as.factor(species),
 #          site = as.factor(site))
-  
-  
+
+
 # prep the data for calculating independent detections
 OSM_2022_det <- OSM_2022_data_fixed %>% 
   
@@ -295,7 +235,16 @@ write_csv(OSM_2022_det_indv,
           'data/processed/OSM_2022_indv_det.csv')
 
 
-# Data visualization independent detections---------------------------------------------
+# Independent detections graph --------------------------------------------
+
+
+# read in saved detection data if starting here
+OSM_2022_det_indv <- read_csv('data/processed/OSM_2022_indv_det.csv') %>% 
+  
+  # change site, species and event_id to factor
+  mutate_if(is.character,
+            as.factor)
+
 
 # check number of different species
 levels(OSM_2022_det_indv$species)
@@ -322,7 +271,7 @@ mammals <- c('White-tailed deer',
              'Long-tailed weasel')
 
 # remove NAs and select just images with mammals first then pipe new data into ggplot
-OSM_2022_det_indv %>% 
+det_graph <- OSM_2022_det_indv %>% 
   
   # remove less useful species
   filter(species %in% mammals) %>% 
@@ -358,28 +307,93 @@ OSM_2022_det_indv %>%
         axis.ticks.x = element_blank(),
         panel.grid = element_blank()) 
 
-# idk why ggplot is not plotting the species names in alphabetical order like its default setting should do, it is bugging me but I'll deal with this later
+# print graph
+det_graph
 
-# Data checks covariate data ----------------------------------------------
 
-# get internal structure info for both the HFI and VEG covariate files using purrr::map
-covariate_data %>% 
+# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+ggsave('2022_indv_det_graph.jpeg',
+       det_graph,
+       path = 'outputs',
+       width = 12,
+       height = 10,
+       units = 'in',
+       dpi = 600)
+
+
+
+# Covariate data ----------------------------------------------------------
+
+# Import covariate data ----------------------------------------------------------
+
+# these data files have a similar format so we will read them in together using the map() function in the purrr package
+
+covariate_data <-    
+  # provide file path (e.g. folders to find the data)
+  file.path('data/raw',
+            
+            # provide the file names
+            c('OSM_LU01_LU13_LU15_LU21_HFI_2022.csv',
+              'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv')) %>%
   
-  map(~.x %>% 
-        str(.))
+  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
+  map(~.x %>%
+        read_csv(.,
+                 
+                 # specify how to read in the various columns
+                 col_types = cols(Site = col_factor(),
+                                  BUFF_DIST = col_integer(),
+                                  .default = col_number())) %>%
+        
+        # set the column names to lower case
+        set_names(
+          names(.) %>%
+            tolower())) %>%
+  
+  # set the names of the two files in the list, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
+  purrr::set_names('HFI',
+                   'VEG')
+
+# will get a warning about parsing issues, don't panic it is fine
 
 
 
-# Data manipulation covariate data ----------------------------------------
+# Deployment data ---------------------------------------------------------
 
 
+# Import deployment data --------------------------------------------
+
+# read in data files individually 
+
+# deployment data
+deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
+                   
+                   # specify how we want the columns read in 
+                   col_types = cols(Project.ID = col_factor(),
+                                    Deployment.Location.ID = col_factor(),
+                                    .default = col_character())
+                   # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
+) %>% 
+  
+  # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower() %>% 
+      
+      # replace the '.' with '_'
+      str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
+                      replacement = '_')) # what you want the pattern to be replaced with
 
 
-# Data checks deployment data ---------------------------------------------
-
-
-# Data manipulation deployment data ---------------------------------------
-
+# deployment site data
+deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
+  
+  # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower()%>% 
+      str_replace_all(pattern = ' ',
+                      replacement = '_'))
 
 
 
