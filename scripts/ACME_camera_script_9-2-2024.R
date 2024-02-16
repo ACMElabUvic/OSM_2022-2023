@@ -206,26 +206,99 @@ names(OSM_2022_data_fixed)
 levels(OSM_2022_data_fixed$site)
 
 
-# Data checks covariate data ----------------------------------------------
+# Save clean timelapse data -----------------------------------------------
+
+# if someone needs this data later
+write_csv(OSM_2022_data_fixed,
+          'data/processed/OSM_2022_timelapse.csv')
 
 
 
+# Independent detections --------------------------------------------------
 
-# Data manipulation covariate data ----------------------------------------
+# we will continue working with the OSM_2022_data but you could start here and import the data again if needed but you'd have to change the structure of a couple variables that get re-read in wrong after the export and import process. Can uncomment and use the code below to do that.
+
+# can select code chunk and use command + shift + c to uncomment or comment a large portion of code
+
+# OSM_2022_data_fixed <- read_csv('data/processed/OSM_2022_timelapse.csv')
+# 
+# # ignoring parsing issues warning, this is just referring to some columns it's expecting logical data for and they contain characters.
+# 
+# # check internal structure, even though we specified everything above with the fixed data when we export and import R often reads the variables in wrong again
+# str(OSM_2022_data_fixed) 
+# 
+# # datatime read correctly but we will need to change site and species to factors again
+# 
+# OSM_2022_data_fixed <- OSM_2022_data_fixed %>% 
+#   
+#   mutate(species = as.factor(species),
+#          site = as.factor(site))
+  
+  
+# prep the data for calculating independent detections
+OSM_2022_det <- OSM_2022_data_fixed %>% 
+  
+  # select only variables of interest
+  select(site,
+         species,
+         datetime) %>% 
+  
+  # remove rows with no species info
+  drop_na(species) %>% 
+  
+  # now we need to create a new variable called timediff
+  # first make sure data are arrange in proper order
+  arrange(site, species, datetime) %>% # this will NOT work if not in correct order (early-late date)
+  
+  # create groups for each species at each site
+  group_by(species, site) %>%
+  
+  # create new variable timediff that will calculate the difference 
+  mutate(timediff = as.numeric(difftime(datetime,lag(datetime),
+                                        units = "mins")))
 
 
+# set the independent detection threshold to 30 minutes
+mins <- 30 
+
+# loop that assigns group ID
+# identifies when there are photos/rows that are more than 30 mins apart
+# Attributes an event ID
+OSM_2022_det$event_id <- 9999
+seq <- as.numeric(paste0(nrow(OSM_2022_det),0))
+seq <- round(seq,-(nchar(seq)))
+
+for (i in 2:nrow(OSM_2022_det)) {
+  OSM_2022_det$event_id[i-1]  <- paste0("E",format(seq, scientific = F))
+  if(is.na(OSM_2022_det$timediff[i]) | abs(OSM_2022_det$timediff[i]) > (mins)){
+    seq <- seq + 1
+  }
+}
+
+if(OSM_2022_det$timediff[nrow(OSM_2022_det)] < (mins)|
+   is.na(OSM_2022_det$timediff[nrow(OSM_2022_det)])){
+  OSM_2022_det$event_id[nrow(OSM_2022_det)] <- OSM_2022_det$event_id[nrow(OSM_2022_det)-1]
+} else{OSM_2022_det$event_id[nrow(OSM_2022_det)] <- paste0("E",format(seq+1, scientific = F))
+}
+
+# now create a new data frame with a single row for each event
+OSM_2022_det_indv <- OSM_2022_det %>% 
+  group_by(event_id) %>%
+  filter(row_number()==1)
+
+# now we are left with a data frame that has 14,102 individual detections
+OSM_2022_det_indv
+
+# let's also save this data to the processed folder for later use
+
+write_csv(OSM_2022_det_indv,
+          'data/processed/OSM_2022_indv_det.csv')
 
 
-# Data checks deployment data ---------------------------------------------
-
-
-# Data manipulation deployment data ---------------------------------------
-
-
-
-# Data visualization ------------------------------------------------------
+# Data visualization independent detections---------------------------------------------
 
 # check number of different species
+levels(OSM_2022_det_indv$species)
 
 # create a vector of the list of mammals to use for quick data visualization/exploration. Could also create a list of species that aren't useful if that is shorter and use filter(!species %in% OBJECTNAME) but for this example the vectors were about the same length
 mammals <- c('White-tailed deer',
@@ -249,22 +322,64 @@ mammals <- c('White-tailed deer',
              'Long-tailed weasel')
 
 # remove NAs and select just images with mammals first then pipe new data into ggplot
-OSM_2022_data %>% 
-  
-  # remove rows with NA for species
-  drop_na(species) %>% 
+OSM_2022_det_indv %>% 
   
   # remove less useful species
   filter(species %in% mammals) %>% 
   
-ggplot(.,
-       aes(x = species)) +
+  # get the number of individual detections per species to add to graph
+  group_by(species) %>% 
+  
+  mutate(n = n()) %>% 
+  
+  ungroup() %>% 
+  
+  ggplot(.,
+         aes(x = species)) +
   
   # create bar graph of the counts of each spp in the data
   geom_bar(aes(fill = species)) +
   
+  # add the number of detections above each bar using the variable n we calculated earlier
+  geom_text(aes(label = n,
+                y = n + 50),
+            size = 4) +
+  
+  # change y axis label
+  labs(y = 'Number of independent detections') +
+  
+  # change breaks for y axis
+  scale_y_continuous(breaks = seq(0,3500, by = 250)) +
+  
   # change theme elements
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 90,
+                                   size = 14),
+        axis.title = element_text(size = 16),
+        axis.ticks.x = element_blank(),
+        panel.grid = element_blank()) 
 
-# idk why ggplot is not plotting the species names in alphabetical order, it is bugging me but I'll deal with this later
+# idk why ggplot is not plotting the species names in alphabetical order like its default setting should do, it is bugging me but I'll deal with this later
+
+# Data checks covariate data ----------------------------------------------
+
+# get internal structure info for both the HFI and VEG covariate files using purrr::map
+covariate_data %>% 
+  
+  map(~.x %>% 
+        str(.))
+
+
+
+# Data manipulation covariate data ----------------------------------------
+
+
+
+
+# Data checks deployment data ---------------------------------------------
+
+
+# Data manipulation deployment data ---------------------------------------
+
+
+
 
