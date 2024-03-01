@@ -508,7 +508,7 @@ covariate_data <-
 
 ### strucutre
 
-even though we set some of the columns to read in as a specific type in the data import step it's always a good idea to check internal structure. We can do this for both data files using purrr::map
+Even though we set some of the columns to read in as a specific type in the data import step it's always a good idea to check internal structure. We can do this for both data files using purrr::map
 
 ```{r covaraites str}
 
@@ -519,6 +519,43 @@ covariate_data %>%
         str(.))
 
 ```
+
+Now let's check that all the sites are accounted for, there should be 155 just like with the timelapse data
+
+```{r covariates site names}
+
+# check that the sites are all there and entered correctly, there should be 155
+
+# since the data sets are in a list we need to call the list first, then the data name in the list, then the column name
+levels(covariate_data$HFI$site)
+levels(covariate_data$VEG$site)
+```
+
+There are 155 for both data sets and I don't see any glaring issues but we can use a function in R to check that these match perfectly.
+
+```{r covariates setdiff}
+# there are 155 for both and don't see any glaring issues but let's check that all these site names match each other using the setdiff function
+setdiff(levels(covariate_data$VEG$site),
+        levels(covariate_data$HFI$site))
+
+# no mismatches
+
+# we need to check that they also match the osm_2022_Det
+setdiff(levels(OSM_2022_det_indv$site),
+        levels(covariate_data$HFI$site))
+
+# [1] "LU12_51" "LU15_35"
+# there seems to be two site names that are different between the covariate data sets and the detection data
+
+# reverse the order to see which two are extras in the covariate data
+setdiff(levels(covariate_data$HFI$site),
+        levels(OSM_2022_det_indv$site))
+
+# [1] "LU13_51" "LU13_35" it looks like the landscape units might have gotten typed in wrong. # checked with original data and these are the correct ones 
+
+```
+
+> We fixed the site issue in the raw data since it's important that the site names are correct so you won't see a difference between the data sets now but I've left the code as an example.
 
 
 # Deployment data
@@ -565,3 +602,26 @@ deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>%
 ```
 
 ## Data checks
+
+Let's take a look at this data as well and make sure everything is okay.
+
+We'll start with the deployment data (deploy)
+
+```{r data check deploy}
+
+# make sure the columns read in properly
+
+str(deploy)
+# everything looks good
+
+# let's check the levels for the landscape units (project_id) and the sites (deployment_location_id) to make sure they match the other data
+
+levels(deploy$project_id)
+levels(deploy$deployment_location_id)
+
+setdiff(levels(OSM_2022_det_indv$site),
+        levels(deploy$deployment_location_id))
+
+
+```
+

@@ -80,7 +80,7 @@ OSM_2022_data_files <- list.files(
   {setNames(map(., read_csv), sub("\\.csv$", "", basename(.)))}
 
 
-# Data checks timelapse data -------------------------------------------------------------
+# Data checks timelapse -------------------------------------------------------------
 
 # check the internal structure
 str(OSM_2022_data) # this should all be good since we specified how to read in each variable above, but if new columns are added from the timelapse process, may need to double check this
@@ -110,7 +110,7 @@ OSM_2022_data %>%
 
 
 
-# Data manipulation Timelapse data -------------------------------------------------
+# Data manipulation timelapse -------------------------------------------------
 
 # can add code/remove code within the code chunk below to fix any issues that were found from the data check steps each year
 
@@ -201,7 +201,7 @@ OSM_2022_det <- OSM_2022_data_fixed %>%
 # set the independent detection threshold to 30 minutes
 mins <- 30 
 
-# loop that assigns group ID
+# loop that assigns group ID (this is not my code don't at me if it doesn't work :/)
 # identifies when there are photos/rows that are more than 30 mins apart
 # Attributes an event ID
 OSM_2022_det$event_id <- 9999
@@ -323,9 +323,10 @@ ggsave('2022_indv_det_graph.jpeg',
 
 
 
+
 # Covariate data ----------------------------------------------------------
 
-# Import covariate data ----------------------------------------------------------
+# Import covariates ----------------------------------------------------------
 
 # these data files have a similar format so we will read them in together using the map() function in the purrr package
 
@@ -359,7 +360,7 @@ covariate_data <-
 
 
 
-# Data checks covariates ---------------------------------------------------
+# Data check covariates ---------------------------------------------------
 
 # internal structure
 covariate_data %>% 
@@ -374,8 +375,8 @@ covariate_data %>%
 levels(covariate_data$HFI$site)
 levels(covariate_data$VEG$site)
 
-# there are 155 for both and don't see any glaring issues but let's check that all these site names match each other
-setdiff(levels(covariate_data$VEG),
+# there are 155 for both and don't see any glaring issues but let's check that all these site names match each other using the setdiff function
+setdiff(levels(covariate_data$VEG$site),
         levels(covariate_data$HFI$site))
 
 # no mismatches
@@ -399,7 +400,7 @@ setdiff(levels(covariate_data$HFI$site),
 # Deployment data ---------------------------------------------------------
 
 
-# Import deployment data --------------------------------------------
+# Import deployment --------------------------------------------
 
 # read in data files individually 
 
@@ -409,6 +410,10 @@ deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
                    # specify how we want the columns read in 
                    col_types = cols(Project.ID = col_factor(),
                                     Deployment.Location.ID = col_factor(),
+                                    Camera.Deployment.Begin.Date. = col_date(
+                                      format = "%d-%b-%y"),
+                                    Camera.Deployment.End.Date = col_date(
+                                      format = "%d-%b-%y"),
                                     .default = col_character())
                    # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
 ) %>% 
@@ -420,11 +425,17 @@ deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
       
       # replace the '.' with '_'
       str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
-                      replacement = '_')) # what you want the pattern to be replaced with
-
+                      replacement = '_')) %>%  # what you want the pattern to be replaced with
+  
+  # rename start and end date so they are shorter
+  rename(.,
+         start_date = camera_deployment_begin_date_,
+         end_date = camera_deployment_end_date)
+  
+  
 
 # deployment site data
-deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
+cameras <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
   
   # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
   set_names(
@@ -433,7 +444,49 @@ deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>%
       str_replace_all(pattern = ' ',
                       replacement = '_'))
 
+# not sure if we need this data, may remove this section later if not needed.
 
+
+# Data check deployment -------------------------------------------------------------
+
+# make sure the columns read in properly
+
+str(deploy)
+# everything looks good
+
+# let's check the levels for the landscape units (project_id) and the sites (deployment_location_id) to make sure they match the other data
+
+# landscape unit
+levels(deploy$project_id)
+
+# site
+levels(deploy$deployment_location_id)
+
+# since the timelapse data should be correct (fingers crossed) let's put it second and see if there are different sites in the deployment data
+setdiff(levels(deploy$deployment_location_id),
+        levels(OSM_2022_det_indv$site))
+
+# [1] "LU15-44" "LI15_03"
+# there are two sites different and just by looking at these I can see the issue. LU15-44 should be LU15_44 and LI15_03 should be LU15_03. We can fix these in the data manipulation section below
+
+
+
+
+# Data manipulation deployment --------------------------------------------
+
+deploy_fixed <- deploy %>% 
+  
+  # rename site entries
+  mutate(deployment_location_id = case_when(deployment_location_id == 'LU15-44' ~ 'LU15_44',
+                                            deployment_location_id == 'LI15_03' ~ 'LU15_03',
+                                            TRUE ~ deployment_location_id))
+
+
+### FIX CODE SO KEEPS VARS AS FACTOR
+
+# check to see that the above code worked
+setdiff(levels(deploy_fixed$deployment_location_id),
+        levels(OSM_2022_det_indv$site))
 
 
 #  Import 2021-2022 data --------------------------------------------------
