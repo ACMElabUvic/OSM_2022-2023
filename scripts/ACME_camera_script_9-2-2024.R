@@ -235,8 +235,7 @@ write_csv(OSM_2022_det_indv,
           'data/processed/OSM_2022_indv_det.csv')
 
 
-# Independent detections graph --------------------------------------------
-
+# Graph independent detections --------------------------------------------
 
 # read in saved detection data if starting here
 OSM_2022_det_indv <- read_csv('data/processed/OSM_2022_indv_det.csv') %>% 
@@ -302,6 +301,8 @@ det_graph <- OSM_2022_det_indv %>%
   
   # change theme elements
   theme(axis.text.x = element_text(angle = 90,
+                                   vjust = 0.5,
+                                   hjust = 1,
                                    size = 14),
         axis.title = element_text(size = 16),
         axis.ticks.x = element_blank(),
@@ -358,6 +359,43 @@ covariate_data <-
 
 
 
+# Data checks covariates ---------------------------------------------------
+
+# internal structure
+covariate_data %>% 
+  
+  # apply str() function inside map()
+  map(~.x %>% 
+        str(.))
+
+# check that the sites are all there and entered correctly, there should be 155
+
+# since the data sets are in a list we need to call the list first, then the data name in the list, then the column name
+levels(covariate_data$HFI$site)
+levels(covariate_data$VEG$site)
+
+# there are 155 for both and don't see any glaring issues but let's check that all these site names match each other
+setdiff(levels(covariate_data$VEG),
+        levels(covariate_data$HFI$site))
+
+# no mismatches
+
+# we need to check that they also match the osm_2022_Det
+setdiff(levels(OSM_2022_det_indv$site),
+        levels(covariate_data$HFI$site))
+
+# [1] "LU12_51" "LU15_35"
+# there seems to be two site names that are different between the covariate data sets and the detection data
+
+# reverse the order to see which two are extras in the covariate data
+setdiff(levels(covariate_data$HFI$site),
+        levels(OSM_2022_det_indv$site))
+
+# [1] "LU13_51" "LU13_35" it looks like the landscape units might have gotten typed in wrong. # checked with original data and these are the correct ones 
+
+# WE ARE GOING TO FIX THE ORIGINAL CSV FILES FROM TIMELPASE SO CAN IGNORE THESE COMMENTS IF RE-RUNNING THIS CODE
+
+
 # Deployment data ---------------------------------------------------------
 
 
@@ -397,3 +435,28 @@ deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>%
 
 
 
+
+#  Import 2021-2022 data --------------------------------------------------
+
+data_2021_2022 <- 
+  
+  # provide file path (e.g. folders to find the data)
+  file.path('data/2021-2022',
+            
+            # provide the file names
+            c('configurationmetrics.csv',
+              'covariates.csv',
+              'response.metrics.csv')) %>%
+  
+  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
+  map(~.x %>%
+        read_csv(.)) %>% 
+  
+  # set list item names
+  purrr::set_names('configuration',
+                   'covariates',
+                   'response')
+
+View(data_2021_2022$configuration)
+View(data_2021_2022$covariates)
+View(data_2021_2022$response)

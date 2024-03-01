@@ -39,8 +39,8 @@ If you don't already have the following packages installed, use the code below t
 
 ```{r install packages, eval=FALSE}
 
-install.packages(tidyverse) # data tidying, visualization, much more
-install.packages(withr) # used to temporarily set wd
+install.packages(tidyverse) 
+install.packages(withr) 
 ```
 
 
@@ -50,8 +50,8 @@ Then load the packages to your library.
 
 ```{r libraries}
 
-library(tidyverse) # will load all tidyverse packages, can see complete list using tidyverse_packages()
-library(withr)
+library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
+library(withr) # used to temporarily set wd
 ```
 
 
@@ -59,7 +59,7 @@ library(withr)
 
 If you opened the OSM_2022-2023.Rproj file you should have your working directory set to the GitHub repository that you downloaded to your hard drive.
 
-We need to temporarily set your working drive to the ACME lab Netdrive to import the Timelapse data files (there are too many to efficiently store on GitHub each year). We will use the `with_dir()` function in the *withr* package to do this. 
+We need to temporarily set your working drive to the ACME lab Netdrive to import the Timelapse data files (there are too many to efficiently store on GitHub or GoogleDrive each year). We will use the `with_dir()` function in the *withr* package to do this. 
 
 Helpful instructions for connecting to and navigating the Netdrive can also be found here: [https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit ](https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit).
 
@@ -164,7 +164,7 @@ str(OSM_2022_data)
 
 ### Sites
 
-For 2022-2023 data there should be 155 (there were 156 sites originally but LU01-31 had no data for some reason so we are left with 155). It looks like we have them all based on the number of levels printed with `str()`, but let's make sure there isn't anything wonky with any of the sites.
+For 2022-2023 data there should be 155 (there were 156 sites originally but LU01-31 had no data for some reason so we are left with 155). It looks like we have them all based on the number of levels printed with `str()`, but let's make sure there isn't anything wonky with any of the sites or site names.
 
 Since we set site as a factor when we imported the data we can check which sites were imported with the `levels()` function, we can compare this with the deployment data found in '1.Resources/2.Arrays/Alberta/OSM/2022-2023/4. Deployment Data/OSM_2022_Deployment_Data.csv' or [here on the google drive for 2022-2023](https://drive.google.com/drive/u/0/folders/1gEH5eZcDyuoLTzUWAp_Db0kEBJCDD_0t)  
 
@@ -184,7 +184,7 @@ Looks like there is one site that was entered with an unnecessary space (LU 01-7
 
 ### Species names
 
-Let's check that all the species names were entered correctly and we don't have any duplicates with different spelling or something which is common with wildlife data.
+Let's check that all the species names were entered correctly and we don't have any duplicates with different spelling or something, which is common with wildlife data.
 
 Since we set species as a factor when we imported the data we can also use the the `levels()` function to see all the species names.
 
@@ -436,6 +436,8 @@ det_graph <- OSM_2022_det_indv %>%
   
   # change theme elements
   theme(axis.text.x = element_text(angle = 90,
+                                   vjust = 0.5,
+                                   hjust = 1,
                                    size = 14),
         axis.title = element_text(size = 16),
         axis.ticks.x = element_blank(),
@@ -465,7 +467,7 @@ ggsave('2022_indv_det_graph.jpeg',
 
 # Covariate data
 
-## Import covaraite data
+## Import covariate data
 These data files have a similar format so we will read them in together using the `map()` function in the *purrr* package. Reminder, the `map()` function let's us perform iterations. The `~.x` after the function is a placeholder that refers to the data before the last pipe (e.g. the .csv files we supplied) and all operations within the `map()` will be performed on all of these objects. 
 
 ```{r import covariate data}
