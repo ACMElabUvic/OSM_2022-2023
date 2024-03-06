@@ -315,3 +315,14 @@ Roughly square in shape clearing, roughly 90-120 meters wide (approximately 1 ha
 
 * <span style = "color: #2274A5;">**LC_class230**</span>, a numeric variable indicating the proportion of landcover class 230 within the buffer area. Landcover class 230 is defined as mixed forest.
 
+
+### DATA-SPECIFIC INFORMATION FOR: [data/processed/OSM_2022_covariates.csv]  
+
+*Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*. 
+
+* **Number of variables/columns:** 74
+* **Number of observations/rows:** 3100 
+
+**Variable List:**
+
+This csv contains combined variables from the HFI and VEG raw data files ( 'OSM_LU01_LU13_LU15_LU21_HFI_2022.csv' & 'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv'). Variable descriptions are the same as above except the variables names are in lowercase type and the HFI variables no longer contain the prefix 'FEATURE_TY'. 

@@ -407,7 +407,7 @@ setdiff(levels(covariate_data$HFI$site),
 
 
 
-# Join covariates ---------------------------------------------------------
+# Join covariates and format ---------------------------------------------------------
 
 covariates_all <- covariate_data$HFI %>% 
   
@@ -419,6 +419,23 @@ covariates_all <- covariate_data$HFI %>%
 # there are quite a few sites for which there isn't any data???
 
 
+# save joined data 
+write_csv(covariates_all,
+          'data/processed/OSM_2022_covaraites.csv')
+
+
+# we also may want to pivot wider so that each column is for a different buffer for modeling purposes, we can use pivot wider to do this
+
+covariates_all_wide <- covariates_all %>% 
+  
+  pivot_wider(.,
+              names_from = buff_dist,
+              values_from = c(harvest_area:lc_class230))
+
+
+# save wide format data 
+write_csv(covariates_all_wide,
+          'data/processed/OSM_2022_WIDE_covariates.csv')
 
 # Deployment data ---------------------------------------------------------
 
