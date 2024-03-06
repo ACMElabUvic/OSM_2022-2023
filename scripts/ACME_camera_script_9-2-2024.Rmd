@@ -491,12 +491,21 @@ covariate_data <-
                                   BUFF_DIST = col_integer(),
                                   .default = col_number())) %>%
         
+        
+        
         # set the column names to lower case
         set_names(
-          names(.) %>%
-            tolower())) %>%
+          names(.) %>% 
+            tolower() %>% 
+            
+            # remove the FEATURE_TY in front of all the column names
+            str_remove(pattern = "feature_ty") %>% 
+            
+            # replace the '.' with '_'
+            str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
+                            replacement = '_'))) %>%  # what you want the pattern to be replaced with
   
-  # set the names of the two files in the list outside of the map function, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
+  # set the names of the two files in the list, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
   purrr::set_names('HFI',
                    'VEG')
 
@@ -557,6 +566,52 @@ setdiff(levels(covariate_data$HFI$site),
 
 > We fixed the site issue in the raw data since it's important that the site names are correct so you won't see a difference between the data sets now but I've left the code as an example.
 
+## Join covariate data and format
+
+Now we need to join the HFI and VEG files together
+```{r join covariate data}
+covariates_all <- covariate_data$HFI %>% 
+  
+  #use full join in case any issues with missing observations but we should be good since we checked the site names
+  full_join(covariate_data$VEG,
+            by = c('site', 'buff_dist'))
+
+
+# there are quite a few sites for which there isn't any data???
+
+```
+ 
+Let's also save this for future use
+ 
+```{r save joined covariate data}
+
+# save joined data 
+write_csv(covariates_all,
+          'data/processed/OSM_2022_covaraites.csv')
+
+```
+
+We may want each buffer to have it's own column for each variable (e.g. create a wide format of this data) for modeling purposes, we can do that with the `pivot_wider()` function. 
+
+```{r wide format covariates}
+# we also may want to pivot wider so that each column is for a different buffer for modeling purposes, we can use pivot wider to do this
+
+covariates_all_wide <- covariates_all %>% 
+  
+  pivot_wider(.,
+              names_from = buff_dist,
+              values_from = c(harvest_area:lc_class230))
+```
+
+Let's also save this data
+
+```{r save wide format covariates}
+
+# save wide format data 
+write_csv(covariates_all_wide,
+          'data/processed/OSM_2022_WIDE_covariates.csv')
+```
+
 
 # Deployment data
 
@@ -574,9 +629,12 @@ deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
                    # specify how we want the columns read in 
                    col_types = cols(Project.ID = col_factor(),
                                     Deployment.Location.ID = col_factor(),
-                                    .default = col_character())
+                                    Camera.Deployment.Begin.Date. = col_date(
+                                      format = "%d-%b-%y"),
+                                    Camera.Deployment.End.Date = col_date(
+                                      format = "%d-%b-%y"),
+                                    .default = col_character())) %>% 
                    # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
-                   ) %>% 
   
   # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
   set_names(
@@ -585,11 +643,29 @@ deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
       
       # replace the '.' with '_'
       str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
-                  replacement = '_')) # what you want the pattern to be replaced with
-
+                      replacement = '_')) %>%  # what you want the pattern to be replaced with
+  
+  # rename start and end date so they are shorter
+  rename(.,
+         start_date = camera_deployment_begin_date_,
+         end_date = camera_deployment_end_date)
 
 # deployment site data
-deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
+cameras <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv',
+                    
+                    # specify how we want the columns read in 
+                    col_types = cols('Deploy Date' = col_date(
+                      format = "%d-%b-%y"),
+                      'Deploy Time' = col_time(),
+                      Lat = col_number(),
+                      Long = col_number(),
+                      Grade = col_integer(),
+                      Elevation = col_integer(),
+                      'Distance to trail (m)' = col_number(),
+                      'Distance to Lure' = col_number(),
+                      'Comments and Access Notes' = col_character(),
+                      .default = col_factor()
+                    )) %>% 
   
   # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
   set_names(
@@ -598,7 +674,7 @@ deploy_sites <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>%
       str_replace_all(pattern = ' ',
                       replacement = '_'))
 
-
+# not sure if we need this data, may remove this section later if not needed.
 ```
 
 ## Data checks
