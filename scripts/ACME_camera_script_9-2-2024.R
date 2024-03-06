@@ -347,10 +347,19 @@ covariate_data <-
                                   BUFF_DIST = col_integer(),
                                   .default = col_number())) %>%
         
+        
+        
         # set the column names to lower case
         set_names(
-          names(.) %>%
-            tolower())) %>%
+          names(.) %>% 
+            tolower() %>% 
+            
+            # remove the FEATURE_TY in front of all the column names
+            str_remove(pattern = "feature_ty") %>% 
+            
+            # replace the '.' with '_'
+            str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
+                            replacement = '_'))) %>%  # what you want the pattern to be replaced with
   
   # set the names of the two files in the list, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
   purrr::set_names('HFI',
@@ -397,6 +406,20 @@ setdiff(levels(covariate_data$HFI$site),
 # WE ARE GOING TO FIX THE ORIGINAL CSV FILES FROM TIMELPASE SO CAN IGNORE THESE COMMENTS IF RE-RUNNING THIS CODE
 
 
+
+# Join covariates ---------------------------------------------------------
+
+covariates_all <- covariate_data$HFI %>% 
+  
+  #use full join in case any issues with missing observations but we should be good since we checked the site names
+  full_join(covariate_data$VEG,
+            by = c('site', 'buff_dist'))
+
+
+# there are quite a few sites for which there isn't any data???
+
+
+
 # Deployment data ---------------------------------------------------------
 
 
@@ -414,9 +437,8 @@ deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
                                       format = "%d-%b-%y"),
                                     Camera.Deployment.End.Date = col_date(
                                       format = "%d-%b-%y"),
-                                    .default = col_character())
+                                    .default = col_character())) %>% 
                    # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
-) %>% 
   
   # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
   set_names(
@@ -435,7 +457,21 @@ deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
   
 
 # deployment site data
-cameras <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv') %>% 
+cameras <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv',
+                    
+                    # specify how we want the columns read in 
+                    col_types = cols('Deploy Date' = col_date(
+                      format = "%d-%b-%y"),
+                      'Deploy Time' = col_time(),
+                      Lat = col_number(),
+                      Long = col_number(),
+                      Grade = col_integer(),
+                      Elevation = col_integer(),
+                      'Distance to trail (m)' = col_number(),
+                      'Distance to Lure' = col_number(),
+                      'Comments and Access Notes' = col_character(),
+                      .default = col_factor()
+                    )) %>% 
   
   # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
   set_names(
@@ -477,39 +513,21 @@ setdiff(levels(deploy$deployment_location_id),
 deploy_fixed <- deploy %>% 
   
   # rename site entries
-  mutate(deployment_location_id = case_when(deployment_location_id == 'LU15-44' ~ 'LU15_44',
-                                            deployment_location_id == 'LI15_03' ~ 'LU15_03',
-                                            TRUE ~ deployment_location_id))
+  mutate(deployment_location_id = as.factor(case_when(deployment_location_id == 'LU15-44' 
+                                            ~ 'LU15_44',
+                                            deployment_location_id == 'LI15_03' 
+                                            ~ 'LU15_03',
+                                            TRUE 
+                                            ~ deployment_location_id)))
 
-
-### FIX CODE SO KEEPS VARS AS FACTOR
 
 # check to see that the above code worked
 setdiff(levels(deploy_fixed$deployment_location_id),
         levels(OSM_2022_det_indv$site))
 
+# now they match
 
-#  Import 2021-2022 data --------------------------------------------------
+# remove old version of data
+rm(deploy)
 
-data_2021_2022 <- 
-  
-  # provide file path (e.g. folders to find the data)
-  file.path('data/2021-2022',
-            
-            # provide the file names
-            c('configurationmetrics.csv',
-              'covariates.csv',
-              'response.metrics.csv')) %>%
-  
-  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
-  map(~.x %>%
-        read_csv(.)) %>% 
-  
-  # set list item names
-  purrr::set_names('configuration',
-                   'covariates',
-                   'response')
 
-View(data_2021_2022$configuration)
-View(data_2021_2022$covariates)
-View(data_2021_2022$response)
