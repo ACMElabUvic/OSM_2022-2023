@@ -123,22 +123,25 @@ This code is probably not that useful but I spent a bit of time figuring out how
 
 This will read in all the data files as separate data frames in a list and name them based on the file names (e.g. the landscape units for 2022-2023 data).
 
+I've commented out this code so it doesn't run everytime, you can select all the code and hit command + c to uncomment everything 
 ```{r import timelapse data option 2, message=FALSE, warning=FALSE}
 
-# option two: read files in as a list and keep them separated by landscape unit (LU). This is useful if you want to do something with the separate files, but otherwise option one is probably better
+# option two: read files in as a list and keep them separated by landscape unit (LU). This is useful if you want to do something with the separate files, but otherwise option one is probably better. 
+
+ 
 
 # temporarily set the working directory to import from the NetDrive
 
-with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
-         
-         # make a list of all .csv files in the 2. Timelapse Files folder
-         OSM_2022_data_files <- list.files(
-           path = '2. Timelapse Files', # provide the folder/s within the working drive where the files are stored
-           pattern = '*\\.csv*', # provide the extension in case there are other files saved in that folder you don't want to load
-           full.names = TRUE) %>% 
-           
-           # set the names to the base name of each file w/o the .csv file extension and read in all the files using read_csv 
-           {setNames(map(., read_csv), sub("\\.csv$", "", basename(.)))})
+# with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
+#          
+#          # make a list of all .csv files in the 2. Timelapse Files folder
+#          OSM_2022_data_files <- list.files(
+#            path = '2. Timelapse Files', # provide the folder/s within the working drive where the files are stored
+#            pattern = '*\\.csv*', # provide the extension in case there are other files saved in that folder you don't want to load
+#            full.names = TRUE) %>% 
+#            
+#            # set the names to the base name of each file w/o the .csv file extension and read in all the files using read_csv 
+#            {setNames(map(., read_csv), sub("\\.csv$", "", basename(.)))})
 
 ```
 
@@ -353,11 +356,11 @@ if(OSM_2022_det$timediff[nrow(OSM_2022_det)] < (mins)|
 }
 
 # now create a new data frame with a single row for each event
-OSM_2022_det_indv <- OSM_2022_det %>% 
+OSM_2022_det_ind <- OSM_2022_det %>% 
   group_by(event_id) %>%
   filter(row_number()==1)
 
-OSM_2022_det_indv
+OSM_2022_det_ind
 
 ```
 
@@ -365,8 +368,8 @@ Let's also save this data file for later
 
 ```{r save detection data, eval=FALSE}
 
-write_csv(OSM_2022_det_indv,
-          'data/processed/OSM_2022_indv_det.csv')
+write_csv(OSM_2022_det_ind,
+          'data/processed/OSM_2022_ind_det.csv')
 
 ```
 
@@ -381,7 +384,7 @@ Now lets create a few quick figures to look at the detection data
 # Data visualization independent detections---------------------------------------------
 
 # check number of different species
-levels(OSM_2022_det_indv$species)
+levels(OSM_2022_det_ind$species)
 
 # create a vector of the list of mammals to use for quick data visualization/exploration. Could also create a list of species that aren't useful if that is shorter and use filter(!species %in% OBJECTNAME) but for this example the vectors were about the same length
 mammals <- c('White-tailed deer',
@@ -405,7 +408,7 @@ mammals <- c('White-tailed deer',
              'Long-tailed weasel')
 
 # remove NAs and select just images with mammals first then pipe new data into ggplot
-det_graph <- OSM_2022_det_indv %>% 
+det_graph <- OSM_2022_det_ind %>% 
   
   # remove less useful species
   filter(species %in% mammals) %>% 
@@ -550,7 +553,7 @@ setdiff(levels(covariate_data$VEG$site),
 # no mismatches
 
 # we need to check that they also match the osm_2022_Det
-setdiff(levels(OSM_2022_det_indv$site),
+setdiff(levels(OSM_2022_det_ind$site),
         levels(covariate_data$HFI$site))
 
 # [1] "LU12_51" "LU15_35"
@@ -558,7 +561,7 @@ setdiff(levels(OSM_2022_det_indv$site),
 
 # reverse the order to see which two are extras in the covariate data
 setdiff(levels(covariate_data$HFI$site),
-        levels(OSM_2022_det_indv$site))
+        levels(OSM_2022_det_ind$site))
 
 # [1] "LU13_51" "LU13_35" it looks like the landscape units might have gotten typed in wrong. # checked with original data and these are the correct ones 
 
@@ -577,6 +580,7 @@ covariates_all <- covariate_data$HFI %>%
             by = c('site', 'buff_dist'))
 
 
+head(covariates_all)
 # there are quite a few sites for which there isn't any data???
 
 ```
@@ -587,7 +591,7 @@ Let's also save this for future use
 
 # save joined data 
 write_csv(covariates_all,
-          'data/processed/OSM_2022_covaraites.csv')
+          'data/processed/OSM_2022_covariates.csv')
 
 ```
 
@@ -601,6 +605,8 @@ covariates_all_wide <- covariates_all %>%
   pivot_wider(.,
               names_from = buff_dist,
               values_from = c(harvest_area:lc_class230))
+
+head(covariates_all_wide)
 ```
 
 Let's also save this data
@@ -621,7 +627,7 @@ Although we could read both of these files in as a list similar to the covariate
 ```{r import deployment data}
 
 
-# read in data files individually 
+# read in deployment data and camera data files individually
 
 # deployment data
 deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
@@ -639,16 +645,12 @@ deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
   # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
   set_names(
     names(.) %>% 
-      tolower() %>% 
+      tolower() %>%  
       
       # replace the '.' with '_'
       str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
-                      replacement = '_')) %>%  # what you want the pattern to be replaced with
+                      replacement = '_'))  # what you want the pattern to be replaced with
   
-  # rename start and end date so they are shorter
-  rename(.,
-         start_date = camera_deployment_begin_date_,
-         end_date = camera_deployment_end_date)
 
 # deployment site data
 cameras <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv',
@@ -695,9 +697,272 @@ str(deploy)
 levels(deploy$project_id)
 levels(deploy$deployment_location_id)
 
-setdiff(levels(OSM_2022_det_indv$site),
+setdiff(levels(OSM_2022_det_ind$site),
         levels(deploy$deployment_location_id))
 
 
 ```
 
+## Data manipulation
+
+This code will also likely need to be changed as year-specific issues arise but gives a starting point for reformatting the data to match some of the other data files and fixing the issues we found in the previous step.
+
+In the pipe below we first rename some of the columns to be shorter/match previous years' data files
+
+Then we fix the names of the specific site entries that were different from the detection data/entered incorrectly
+
+Finally, we select only the columns we need (dropping the deployment_id and camera_failure_details)
+
+Then we double check that the site names match the other data frame and they do!
+```{r data manipulation deploy}
+deploy_fixed <- deploy %>% 
+  
+  # rename start and end date so they are shorter
+  # rename project_id and deployment_location_id so they match previous years' columns
+  rename(start_date = camera_deployment_begin_date_,
+         end_date = camera_deployment_end_date,
+         array = project_id,
+         site = deployment_location_id) %>% 
+  
+  # rename site entries and remove prefix OSM from array
+  mutate(site = as.factor(case_when(site == 'LU15-44' 
+                                    ~ 'LU15_44',
+                                    site == 'LI15_03' 
+                                    ~ 'LU15_03',
+                                    TRUE 
+                                    ~ site)),
+         array = str_remove(array, 
+                            pattern = "OSM_")) %>% 
+  
+  # remove columns we don't need
+  select(!c(camera_failure_details,
+            deployment_id))
+
+
+# check to see that the above code worked for renaming sites
+setdiff(levels(deploy_fixed$site),
+        levels(OSM_2022_det_ind$site))
+
+# now they match
+```
+
+Now that this data is cleaned up we should save it to the data/processed folder
+
+```{r save deploy data}
+
+# save to processed data folder
+
+write_csv(deploy_fixed,
+          'data/processed/OSM_2022_deployment.csv')
+
+```
+
+
+# Camera operability 
+
+We can check the length each camera was operating using the cleaned deployment data
+
+```{r camera operability}
+
+ggplot(deploy_fixed, aes(color = array))+
+  
+  geom_segment(aes(x = start_date, 
+                   xend = end_date,
+                   y = site, 
+                   yend = site))
+
+```
+
+> something weird is happening with the end of one of the LU15 sites
+
+
+# Response metrics
+
+there are several response metrics we can calculate, the ones we will cover here are 
+
+ 1. Total independent detections per species/site
+ 2. Presence/absence per species/site
+ 3. Proportion of monthly detections
+ 
+## Data
+
+For this we need the deployment and independent detection data we created earlier, if you are still working through this script its the 'deploy_fixed' & 'detections' objects
+
+```{r response metric data}
+
+# deploy
+deploy_fixed <- read_csv('data/processed/OSM_2022_deployment.csv')
+
+
+# detections
+detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>% 
+  
+  # change site, species and event_id to factor
+  mutate_if(is.character,
+            as.factor)
+```
+
+## 1. Total independent detections 
+
+The first response metric we will calcualte is the total number of independent detections per speceis per site. 
+
+To do this we use the detections data we created earlier from the raw timelapse data. We need to group by site and species and then we can use the `summarise()` function with the `n()` function to count the total detections 
+After that we ungroup the data so if we run an analysis or make a plot it doesn't stay grouped and then we use the `pivot_wider()` function to make a column for each species and a row for each site.
+
+Finally we need to replace any NAs with zeros (the `n()` function function won't insert a zero if there aren't any observations to count so these NAs are indeed zeros)
+```{r total ind det}
+
+total_detections <- detections %>% 
+  
+  # group by site and species to count detections
+  group_by(site, species) %>% 
+  
+  # use summarise to count detections per species per site
+  summarise(detections = n()) %>% 
+  
+  ungroup() %>% 
+  
+  pivot_wider(names_from = species,
+              values_from = detections) %>% 
+  
+  # replace NAs with 0 in all species columns
+  mutate(across(
+    where(is.numeric),
+    ~ replace_na(., 0)))
+  
+```
+
+Now that this data is formatted we should save it to the data/processed folder for use later
+
+```{r save total ind det}
+
+# save csv file to processed data folder as OSM_2022_total_detections
+write_csv(total_detections,
+          'data/processed/OSM_2022_total_detections.csv')
+```
+
+We can also plot this data to see what it looks like
+
+In the code below we create an object called site_detections_plot where we pipe the total detection data into the `ggplot()` function after doing some formatting to make it plot
+
+```{r plot total ind det}
+
+site_detections_plot <-  total_detections %>% 
+  
+  # we need to pivot longer to create species column again for plotting
+  pivot_longer(cols = 2:40,
+               names_to = 'species',
+               values_to = 'detections') %>% 
+  
+  # remove less useful species using a list created in the 'Graph independent detections' section
+  filter(species %in% mammals) %>% 
+  
+  # pipe into ggplot function
+ggplot(.,
+       aes(x = site,
+           y = detections)) +
+  
+  geom_col() +
+  
+  # use facet wrap to make separate plots for each species 
+  facet_wrap(vars(species)) +
+  
+  # shift axis text to 90 degrees so site name are readable
+  theme(axis.text.x = element_text(angle = 90,
+                                   size = 3),
+        axis.ticks.x = element_blank())
+
+
+# view plot
+site_detections_plot
+
+```
+
+This is not the most readable plot because some species are skewing the x axis really high but it works for exploratory purposes.
+
+We may want to save the plot for easier viewing later
+
+```{r save plot total ind det}
+
+# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+ggsave('2022_detections_by_site.jpeg',
+       site_detections_plot,
+       path = 'figures',
+       width = 12,
+       height = 10,
+       units = 'in',
+       dpi = 600)
+
+```
+
+## 2. Presence/absences
+
+A second response metric we may want to use is simply presence/absence data. Here we can use the total_detections data and replace any values greater than 0 with 1s to create a binary variable. 
+
+```{r presence/absence}
+
+# we can use the data from above to create a similar response metric of simply presences and absences per species per site
+
+species_presence <- total_detections %>% 
+  
+  # replace all values above 0 with 1s
+  mutate_if(is.numeric, 
+            ~1 * (. > 0))
+
+# now we have presence absence data for all species
+```
+
+We may also want to plot this similarly to the total detections per site to look at the data easier
+
+As before we create a new object with our plot title name and then pipe the data after some formatting into the `ggplot()` function.
+```{r plot presence/absence}
+# plot this data in ggplot
+species_presence_plot <- species_presence %>% 
+  
+  # first we need to pivot the data longer again so we have a species column for plotting
+  pivot_longer(cols = 2:40,
+               names_to = 'species',
+               values_to = 'presence') %>% 
+  
+  # remove less useful species using a list created in the 'Graph independent detections' section
+  filter(species %in% mammals) %>% 
+  
+  # pipe into ggplot function
+ggplot(., 
+       aes(x = site, y = presence)) +
+  
+  # use geom_jitter instead of geom_point so we can shift points on y-axis to make them easier to view
+  geom_jitter(shape = 16,
+              size = 1.5,
+              width = 0,
+              height = 0.05,
+              alpha = 0.5) +
+  
+  # use facet_wrap to make separate plots for each species so data is easier to look at
+  facet_wrap(vars(species)) +
+  
+  # shift axis text to 90 degrees so site name are readable
+  theme(axis.text.x = element_text(angle = 90,
+                                   size = 3))
+
+
+
+# view plot
+species_presence_plot
+```
+
+And we save the graph to view easier later on
+
+```{r save plot presence/absence}
+
+# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+ggsave('2022_species_presence_graph.jpeg',
+       species_presence_plot,
+       path = 'figures',
+       width = 12,
+       height = 10,
+       units = 'in',
+       dpi = 600)
+```
+
+## 3. Proportion monthly detections
