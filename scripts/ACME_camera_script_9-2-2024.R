@@ -135,7 +135,12 @@ OSM_2022_data_fixed <- OSM_2022_data %>%
                        replacement = '_'),
     
     # site needs to be a factor and for some reason the code above changes it to a character
-    site = as.factor(site)) 
+    site = as.factor(site),
+    
+    # add month and year columns from the datetime data for merging with other files later
+    month = month(datetime),
+    year = year(datetime)
+    ) 
 
 
 # use code below  to check that each step worked
@@ -181,7 +186,9 @@ OSM_2022_det <- OSM_2022_data_fixed %>%
   # select only variables of interest
   select(site,
          species,
-         datetime) %>% 
+         datetime,
+         month,
+         year) %>% 
   
   # remove rows with no species info
   drop_na(species) %>% 
@@ -238,7 +245,7 @@ write_csv(OSM_2022_det_ind,
 # Graph independent detections --------------------------------------------
 
 # read in saved detection data if starting here
-detections <- read_csv('data/processed/OSM_2022_indv_det.csv') %>% 
+detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>% 
   
   # change site, species and event_id to factor
   mutate_if(is.character,
@@ -598,6 +605,18 @@ detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>%
             as.factor)
 
 
+# create a list of focal species for filtering the data/plots
+ focal_species <- c('Black bear',
+                    'Caribou',
+                    'Cougar',
+                    'Coyote',
+                    'Fisher',
+                    'Grey wolf',
+                    'Lynx',
+                    'Moose',
+                    'Red fox',
+                    'White-tailed deer',
+                    'Wolverine')
 
 # 1. Total independent detections  ----------------------------------------
 
@@ -635,7 +654,7 @@ site_detections_plot <-  total_detections %>%
                values_to = 'detections') %>% 
   
   # remove less useful species using a list created in the 'Graph independent detections' section
-  filter(species %in% mammals) %>% 
+  filter(species %in% focal_species) %>% 
   
   # pipe into ggplot function
 ggplot(.,
@@ -684,6 +703,13 @@ species_presence <- total_detections %>%
 
 # now we have presence absence data for all species
 
+
+# save data to data/processed folder
+write_csv(species_presence,
+          'data/processed/OSM_2022_species_presence.csv')
+
+
+
 # plot this data in ggplot
 species_presence_plot <- species_presence %>% 
   
@@ -693,7 +719,7 @@ species_presence_plot <- species_presence %>%
                values_to = 'presence') %>% 
   
   # remove less useful species using a list created in the 'Graph independent detections' section
-  filter(species %in% mammals) %>% 
+  filter(species %in% focal_species) %>% 
   
   # pipe into ggplot function
 ggplot(., 
@@ -733,9 +759,9 @@ ggsave('2022_species_presence_graph.jpeg',
 
 # we need to use the deployment data to determine how many days each camera was active for
 
-# this script from Becca Smith, MSc should do just that!
+# this script modified from Becca Smith, MSc should do just that!
 
-months_active <- deploy_fixed %>% 
+deploy_active <- deploy_fixed %>% 
   
   # for each row, create a sequence between the start and end dates, and make a new row for that for each date
   rowwise() %>% 
@@ -756,4 +782,148 @@ months_active <- deploy_fixed %>%
   
   # get distinct rows for each 
   distinct(site, month, year, 
-           .keep_all = TRUE) 
+           .keep_all = TRUE) %>% 
+  
+  # mark which months have < 15 days active to be removed later
+  mutate(remove = case_when(days_month <15 ~ 'remove',
+                            days_month >=15 ~ 'keep'))
+
+
+# calculate the total number of months each camera was active for including only those active for >15 days/month or the 'keep' values
+
+deploy_months_active <- deploy_active %>% 
+  
+  # keep only months camera active >15 days
+  filter(remove == 'keep') %>% 
+  
+  # group by site and month
+  group_by(site) %>% 
+  
+  # count total number of months active
+  summarise(months_active = n()) 
+
+# we will use this data later
+
+
+# now that we have  identified cameras that were not active long enough each month to reliably extract data from we can use that column to remove this data from the detections data frame
+
+proportional_detections <- detections %>% 
+  
+  # join data to the deploy_active data frame
+  left_join(deploy_active,
+            by = c('site',
+                   'month',
+                   'year')) %>% 
+  
+  # filter by only those we identified as 'keep' (i.e. camera working >=15 days/month)
+  filter(remove == 'keep') %>% 
+  
+  # get a distinct row for each species at each site for each month and year
+  distinct(site, 
+           species, 
+           month,
+           year) %>% 
+  
+  # group by site and species to create data frame with one row per site x species combo
+  group_by(site, 
+           species) %>% 
+  
+  summarise(months_present = n()) %>% 
+  
+  # ungroup data
+  ungroup() %>% 
+  
+  # filter to only species in the list of focal species we created earlier
+  # NOTE when we do this we lose 3 sites because there weren't any of these species detected at those sites during months where the camera was active >= 15 days/month
+  filter(species %in% focal_species) %>% 
+  
+  # pivot the data wider so there is a column for each species and 1 row per site
+  pivot_wider(names_from = species,
+              values_from = months_present) %>% 
+  
+  # replace NAs with zeros in all species columns
+  mutate(across(
+    where(is.numeric),
+    ~ replace_na(., 0))) %>% 
+  
+  # add column for total months each camera was active from the deploy_months_active object we created earlier
+  
+  left_join(deploy_months_active,
+            by = 'site') %>% 
+  
+  # ensure all species columns are numeric not integer
+  mutate_if(is.integer,
+            as.numeric)
+  
+
+# run a function to create columns for absences based on presence data and how many months the camera was functioning
+
+# first convert data to data frame not a tibble for function to work
+proportional_detections <- as.data.frame(proportional_detections)
+
+# create a vector of the species columns for the loop
+# use all species columns (this value may change year to year)
+cols <- 2:12
+
+for (col in cols) {
+  if (is.numeric(proportional_detections[,col]) & is.numeric(proportional_detections[,13])) 
+    {new_col_name <- paste0("absent_", colnames(proportional_detections)[col])
+    proportional_detections[new_col_name] <- proportional_detections[,13] - proportional_detections[,col]
+  }
+}
+
+
+# rename columns for species because R doesn't like spaces
+proportional_detections <- proportional_detections %>% 
+  
+  # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower()%>% 
+      str_replace_all(pattern = ' ',
+                      replacement = '_'))
+
+
+
+# fix bear data
+
+# before we can use this data we need to adjust the columns for bears since they are hibernating we don't want to calculate their presence/absence for those inactive months
+
+# For bears we want to subset further and have months_active not include Dec-March
+months_active_bears <- months_active %>% 
+  
+  # filter to months bears are active
+  filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
+  
+  # get distinct rows for each 
+  distinct(site, month, year, 
+           .keep_all = TRUE) %>% 
+  
+  # group by site
+  group_by(site) %>% 
+  
+  # count the number of months active during bear active season and save as new column
+  summarise(months_active_bears = n())
+ 
+
+# now we overwrite the absent column for black bears using new info
+
+proportional_detections_bears <- proportional_detections %>% 
+  
+  # join the bear active data
+  left_join(months_active_bears, 
+            by = 'site') %>% 
+  
+  # overwrite absent black bear column
+  mutate(absent_black_bear = months_active_bears - black_bear) %>%
+  
+  # get rid of unnecessary columns for active months
+  select(-c(months_active, 
+            months_active_bears))
+
+ 
+# save data
+write_csv(proportional_detections_bears,
+          'data/processed/OSM_2022_proportional_detections.csv')
+
+
