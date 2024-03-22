@@ -567,6 +567,9 @@ write_csv(deploy_fixed,
 
 # Camera operability ------------------------------------------------------
 
+# if starting from this point read in data
+deploy_fixed <- read_csv('data/processed/OSM_2022_deployment.csv')
+
 # create graph of camera operability
 
 ggplot(deploy_fixed, aes(color = array))+
@@ -574,7 +577,9 @@ ggplot(deploy_fixed, aes(color = array))+
   geom_segment(aes(x = start_date, 
                    xend = end_date,
                    y = site, 
-                   yend = site))
+                   yend = site)) +
+  
+  theme(axis.text = element_text(size = 6))
 
 # Response metrics --------------------------------------------------------
 

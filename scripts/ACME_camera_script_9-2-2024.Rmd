@@ -4,18 +4,36 @@ author: "Marissa A. Dyck"
 date: "2024-02-09"
 output: 
   html_document:
-    code_folding: show
     theme: journal
     toc: yes
     toc_float: yes
 ---
-
+ 
+The first two chunks of this r markdown file allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 ```
 
+```{css zoom-lib-src, echo = FALSE}
+script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+```
+
+```{js zoom-jquery, echo = FALSE}
+ $(document).ready(function() {
+    $('body').prepend('<div class=\"zoomDiv\"><img src=\"\" class=\"zoomImg\"></div>');
+    // onClick function for all plots (img's)
+    $('img:not(.zoomImg)').click(function() {
+      $('.zoomImg').attr('src', $(this).attr('src')).css({width: '100%'});
+      $('.zoomDiv').css({opacity: '1', width: 'auto', border: '1px solid white', borderRadius: '5px', position: 'fixed', top: '50%', left: '50%', marginRight: '-50%', transform: 'translate(-50%, -50%)', boxShadow: '0px 0px 50px #888888', zIndex: '50', overflow: 'auto', maxHeight: '100%'});
+    });
+    // onClick function for zoomImg
+    $('img.zoomImg').click(function() {
+      $('.zoomDiv').css({opacity: '0', width: '0%'}); 
+    });
+  });
+```
 # Before you begin
 
 A few notes about this script.
@@ -119,11 +137,11 @@ This code will return warnings related to 'parsing issues'. Don't panic, it is f
 
 ### Option 2
 
-This code is probably not that useful but I spent a bit of time figuring out how to make it work before I fixed the code for option 1 so I have kept it here in case it is of use to someone in the future.
+This code is probably not that useful but I spent a bit of time figuring out how to make it work before I fixed the code for option 1 so I have kept it here in case it is of use to someone in the future, but have commented it out so it doesn't run every time.
 
 This will read in all the data files as separate data frames in a list and name them based on the file names (e.g. the landscape units for 2022-2023 data).
 
-I've commented out this code so it doesn't run everytime, you can select all the code and hit command + c to uncomment everything 
+I've commented out this code so it doesn't run every time, you can select all the code and hit command + c to uncomment everything 
 ```{r import timelapse data option 2, message=FALSE, warning=FALSE}
 
 # option two: read files in as a list and keep them separated by landscape unit (LU). This is useful if you want to do something with the separate files, but otherwise option one is probably better. 
@@ -764,12 +782,19 @@ We can check the length each camera was operating using the cleaned deployment d
 
 ```{r camera operability}
 
+# if starting from this point read in data
+deploy_fixed <- read_csv('data/processed/OSM_2022_deployment.csv')
+
+# create graph of camera operability
+
 ggplot(deploy_fixed, aes(color = array))+
   
   geom_segment(aes(x = start_date, 
                    xend = end_date,
                    y = site, 
-                   yend = site))
+                   yend = site)) +
+  
+  theme(axis.text = element_text(size = 6))
 
 ```
 
@@ -966,3 +991,209 @@ ggsave('2022_species_presence_graph.jpeg',
 ```
 
 ## 3. Proportion monthly detections
+
+We need to use the deployment data to determine how many days each camera was active for
+
+The script below, modified from Becca Smith's MSc should do just that!
+
+First we create a new data frame from the deploy_fixed (deployment data frame that's been cleaned) with some of the same columns and a new column 'day' that goes from the start date to the end date of each camera deployment and increases by intervals of 1 (for each day the camera was active). We use this to calculate the number of days/month each camera was active for and create a new variable for this called days_month. and then we create another column based on the days/month the camera was active that classifies each month of data for a camera as keep or remove based on whether there were at least 15 active camera days in that month. This is because we don't want to estimate monthly data for a camera that was working less than half the time. 
+
+```{r prop month detections step 1: days active}
+
+deploy_active <- deploy_fixed %>% 
+  
+  # for each row, create a sequence between the start and end dates, and make a new row for that for each date
+  rowwise() %>% 
+  do(data.frame(array = .$array, 
+                site = .$site, 
+                start = .$start_date, 
+                end = .$end_date, 
+                day = seq(.$start_date, .$end_date, by = "1 day"))) %>% 
+  # Create a new column that determines which month each of your dates is in
+  mutate(month = month(day),
+         year = year(day)) %>% 
+  
+  # group by site, month and year
+  group_by(site, month, year) %>% 
+  
+  # Determine number of days per month camera is active
+  mutate(days_month = length(unique(day))) %>% 
+  
+  # get distinct rows for each 
+  distinct(site, month, year, 
+           .keep_all = TRUE) %>% 
+  
+  # mark which months have < 15 days active to be removed later
+  mutate(remove = case_when(days_month <15 ~ 'remove',
+                            days_month >=15 ~ 'keep'))
+```
+
+Now we calculate the total number of months each camera was active for based on the new column we created (remove) for those active at least 15 days/month. 
+
+We will use this data again later
+```{r prop month detections step 2: months active}
+
+# calculate the total number of months each camera was active for including only those active for >15 days/month or the 'keep' values
+
+deploy_months_active <- deploy_active %>% 
+  
+  # keep only months camera active >15 days
+  filter(remove == 'keep') %>% 
+  
+  # group by site and month
+  group_by(site) %>% 
+  
+  # count total number of months active
+  summarise(months_active = n()) 
+
+# we will use this data later
+
+```
+
+Now that we have  identified cameras that were not active long enough each month to reliably extract data from we can use that column to remove this data from the detections data frame.
+
+Then from the data we keep we can create a new data frame that has 1 row per camera and a column for each species indicating how many of the active months each species was detected at that camera.
+```{r prop month detections step 3: presences}
+
+# now that we have  identified cameras that were not active long enough each month to reliably extract data from we can use that column to remove this data from the detections data frame
+
+proportional_detections <- detections %>% 
+  
+  # join data to the deploy_active data frame
+  left_join(deploy_active,
+            by = c('site',
+                   'month',
+                   'year')) %>% 
+  
+  # filter by only those we identified as 'keep' (i.e. camera working >=15 days/month)
+  filter(remove == 'keep') %>% 
+  
+  # get a distinct row for each species at each site for each month and year
+  distinct(site, 
+           species, 
+           month,
+           year) %>% 
+  
+  # group by site and species to create data frame with one row per site x species combo
+  group_by(site, 
+           species) %>% 
+  
+  summarise(months_present = n()) %>% 
+  
+  # ungroup data
+  ungroup() %>% 
+  
+  # filter to only species in the list of focal species we created earlier
+  # NOTE when we do this we lose 3 sites because there weren't any of these species detected at those sites during months where the camera was active >= 15 days/month
+  filter(species %in% focal_species) %>% 
+  
+  # pivot the data wider so there is a column for each species and 1 row per site
+  pivot_wider(names_from = species,
+              values_from = months_present) %>% 
+  
+  # replace NAs with zeros in all species columns
+  mutate(across(
+    where(is.numeric),
+    ~ replace_na(., 0))) %>% 
+  
+  # add column for total months each camera was active from the deploy_months_active object we created earlier
+  
+  left_join(deploy_months_active,
+            by = 'site') %>% 
+  
+  # ensure all species columns are numeric not integer
+  mutate_if(is.integer,
+            as.numeric)
+  
+
+```
+
+Now we can run the function below to create a second column for each species that will represent the number of absences (months the species was not detected) at each camera from the active months.
+
+```{r prop month detections step 4: absences}
+
+# run a function to create columns for absences based on presence data and how many months the camera was functioning
+
+# first convert data to data frame not a tibble for function to work
+proportional_detections <- as.data.frame(proportional_detections)
+
+# create a vector of the species columns for the loop
+# use all species columns (this value may change year to year)
+cols <- 2:12
+
+for (col in cols) {
+  if (is.numeric(proportional_detections[,col]) & is.numeric(proportional_detections[,13])) 
+    {new_col_name <- paste0("absent_", colnames(proportional_detections)[col])
+    proportional_detections[new_col_name] <- proportional_detections[,13] - proportional_detections[,col]
+  }
+}
+
+```
+
+We want to rename the species columns so they don't have spaces (r doesn't like spaces for column names but it was fine when they were entries in the data)
+```{r prop month detections step 4: rename species columns}
+
+# rename columns for species because R doesn't like spaces
+proportional_detections <- proportional_detections %>% 
+  
+  # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower()%>% 
+      str_replace_all(pattern = ' ',
+                      replacement = '_'))
+
+```
+
+Now we have to do a bit of final wrangling of the data to fix the bear columns because we don't want to consider the months that bears are not active in the months active columns. 
+
+```{r prop month detections step 5: bear fix}
+
+# fix bear data
+
+# before we can use this data we need to adjust the columns for bears since they are hibernating we don't want to calculate their presence/absence for those inactive months
+
+# For bears we want to subset further and have months_active not include Dec-March
+months_active_bears <- months_active %>% 
+  
+  # filter to months bears are active
+  filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
+  
+  # get distinct rows for each 
+  distinct(site, month, year, 
+           .keep_all = TRUE) %>% 
+  
+  # group by site
+  group_by(site) %>% 
+  
+  # count the number of months active during bear active season and save as new column
+  summarise(months_active_bears = n())
+ 
+
+# now we overwrite the absent column for black bears using new info
+
+proportional_detections_bears <- proportional_detections %>% 
+  
+  # join the bear active data
+  left_join(months_active_bears, 
+            by = 'site') %>% 
+  
+  # overwrite absent black bear column
+  mutate(absent_black_bear = months_active_bears - black_bear) %>%
+  
+  # get rid of unnecessary columns for active months
+  select(-c(months_active, 
+            months_active_bears))
+
+```
+
+Finally we can save this data
+```{r save prop month detections}
+
+# save data
+write_csv(proportional_detections_bears,
+          'data/processed/OSM_2022_proportional_detections.csv')
+
+
+```
+
