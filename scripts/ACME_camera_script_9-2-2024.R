@@ -581,6 +581,22 @@ ggplot(deploy_fixed, aes(color = array))+
   
   theme(axis.text = element_text(size = 6))
 
+
+# something weird is happening with a site in LU15, it has a later end date than the others by a lot. Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+
+deploy_fixed %>% 
+  
+  filter(array == 'LU15') %>% 
+  
+ ggplot(., ) +
+  
+  geom_segment(aes(x = start_date,
+                   xend = end_date,
+                   y = site, 
+                   yend = site))
+
+# the site we need to check in the raw data is LU15_12
+
 # Response metrics --------------------------------------------------------
 
 # there are several response metrics we can calculate, the ones we will cover here are 
@@ -895,10 +911,12 @@ proportional_detections <- proportional_detections %>%
 # before we can use this data we need to adjust the columns for bears since they are hibernating we don't want to calculate their presence/absence for those inactive months
 
 # For bears we want to subset further and have months_active not include Dec-March
-months_active_bears <- months_active %>% 
   
-  # filter to months bears are active
-  filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
+# now let's recalculate the number of active months 
+months_active_bears <- deploy_active %>% 
+  
+  # filter to months bears are active (April - November)
+  dplyr::filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
   
   # get distinct rows for each 
   distinct(site, month, year, 

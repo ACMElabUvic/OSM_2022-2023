@@ -798,7 +798,22 @@ ggplot(deploy_fixed, aes(color = array))+
 
 ```
 
-> something weird is happening with the end of one of the LU15 sites
+Ssomething weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+
+```{r LU15 camera deploy check}
+
+deploy_fixed %>% 
+  
+  filter(array == 'LU15') %>% 
+  
+ ggplot(., ) +
+  
+  geom_segment(aes(x = start_date,
+                   xend = end_date,
+                   y = site, 
+                   yend = site))
+```
+> the site we need to check in the raw data is LU15_12
 
 
 # Response metrics
@@ -825,6 +840,23 @@ detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>%
   # change site, species and event_id to factor
   mutate_if(is.character,
             as.factor)
+```
+
+For plotting and formatting proportional monthly detections we need to create a subset of the species in the detections data to just include several focal species we are interested in
+```{r focal species}
+
+# create a list of focal species for filtering the data/plots
+ focal_species <- c('Black bear',
+                    'Caribou',
+                    'Cougar',
+                    'Coyote',
+                    'Fisher',
+                    'Grey wolf',
+                    'Lynx',
+                    'Moose',
+                    'Red fox',
+                    'White-tailed deer',
+                    'Wolverine')
 ```
 
 ## 1. Total independent detections 
@@ -1153,11 +1185,11 @@ Now we have to do a bit of final wrangling of the data to fix the bear columns b
 
 # before we can use this data we need to adjust the columns for bears since they are hibernating we don't want to calculate their presence/absence for those inactive months
 
-# For bears we want to subset further and have months_active not include Dec-March
-months_active_bears <- months_active %>% 
+# now let's recalculate the number of active months
+months_active_bears <- deploy_active %>% 
   
-  # filter to months bears are active
-  filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
+  # filter to months bears are active (April - November)
+  dplyr::filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
   
   # get distinct rows for each 
   distinct(site, month, year, 
@@ -1168,6 +1200,8 @@ months_active_bears <- months_active %>%
   
   # count the number of months active during bear active season and save as new column
   summarise(months_active_bears = n())
+ 
+
  
 
 # now we overwrite the absent column for black bears using new info
