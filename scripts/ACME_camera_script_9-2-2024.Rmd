@@ -9,7 +9,8 @@ output:
     toc_float: yes
 ---
  
-The first two chunks of this r markdown file allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
+The first two chunks of this r markdown file after the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -37,6 +38,8 @@ script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
 
 # Before you begin
 
+## Notes
+
 A few notes about this script.
 
 If you are running this with the 2022-2023 data make sure you download the whole (OSM_2022-2023 GitHub repository)[https://github.com/ACMElabUvic/OSM_2022-2023] from the ACMElabUvic GitHub. This will ensure you have all the files, data, and proper folder structure you will need to run this code and associated analyses.
@@ -52,7 +55,7 @@ School of Environmental Studies
 Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)     
 
 
-# Install packages
+## Install packages
 
 If you don't already have the following packages installed, use the code below to install them.
 
@@ -63,7 +66,7 @@ install.packages(withr)
 ```
 
 
-# Load libraries
+## Load libraries
 
 Then load the packages to your library.
 
@@ -165,7 +168,6 @@ I've commented out this code so it doesn't run every time, you can select all th
 ```
 
 
-
 ## Data checks
 
 This section will likely need to be altered and amended each year as various year-specific issues with the data arise, but the functions in this section offer a good starting point to take a look at the data and ensure things imported correctly.
@@ -249,6 +251,7 @@ The following code will fix any data issues we found in the data check steps. Th
 I like to do as much of my data manipulation I can in one *dplyr* pipe (i.e. code chunk) to avoid extra coding and assigning intermediate objects to the environment that I don't need, but if this format doesn't make sense to you, each step can be done individually if you pull the code out of the pipeline and reference the data within each function.
 
 ```{r timelapse data manipulation}
+
 # Data manipulation timelapse data -------------------------------------------------
 
 # can add code/remove code within the code chunk below to fix any issues that were found from the data check steps each year
@@ -301,7 +304,7 @@ print(OSM_2022_data_fixed,
 
 In case someone wants all of the raw timelapse data without the issues that we fixed in the data manipulation section we should save this to a folder so we don't have to run the code again.
 
-```{r save timelapse, eval=FALSE}
+```{r save timelapse}
 
 # Save clean timelapse data -----------------------------------------------
 
@@ -343,9 +346,12 @@ The data manipulation and loop below will do this for us.
 OSM_2022_det <- OSM_2022_data_fixed %>% 
   
   # select only variables of interest
-  select(site,
+  select(array,
+         site,
          species,
-         datetime) %>% 
+         datetime,
+         month,
+         year) %>% 
   
   # remove rows with no species info
   drop_na(species) %>% 
@@ -394,9 +400,11 @@ OSM_2022_det_ind
 
 ```
 
+### Save independent detections
+
 Let's also save this data file for later
 
-```{r save detection data, eval=FALSE}
+```{r save detection data}
 
 write_csv(OSM_2022_det_ind,
           'data/processed/OSM_2022_ind_det.csv')
@@ -492,7 +500,7 @@ det_graph
 
 Let's also save this graph in case we want to look at it later without running all the code
 
-```{r save det_graph, eval=FALSE}
+```{r save det_graph}
 
 # save graph as jpeg (can also save as tiff, png, pdf by changing the file extension) but don't use .tiff in the github repo it takes up too much space and causes issues
 ggsave('2022_indv_det_graph.jpeg',
@@ -814,6 +822,7 @@ Finally, we select only the columns we need (dropping the deployment_id and came
 
 Then we double check that the site names match the other data frame and they do!
 ```{r data manipulation deploy}
+
 deploy_fixed <- deploy %>% 
   
   # rename start and end date so they are shorter
@@ -824,12 +833,9 @@ deploy_fixed <- deploy %>%
          site = deployment_location_id) %>% 
   
   # rename site entries and remove prefix OSM from array
-  mutate(site = as.factor(case_when(site == 'LU15-44' 
-                                    ~ 'LU15_44',
-                                    site == 'LI15_03' 
-                                    ~ 'LU15_03',
-                                    TRUE 
-                                    ~ site)),
+  mutate(site = as.factor(case_when(site == 'LU15-44' ~ 'LU15_44',
+                                    site == 'LI15_03' ~ 'LU15_03',
+                                    TRUE  ~ site)),
          array = str_remove(array, 
                             pattern = "OSM_")) %>% 
   
@@ -879,7 +885,7 @@ ggplot(deploy_fixed, aes(color = array))+
 
 ```
 
-Ssomething weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+Ssomething weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. (This may not show up once the correction has been made to the raw data file). Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
 
 ```{r LU15 camera deploy check}
 

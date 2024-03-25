@@ -1,0 +1,250 @@
+---
+title: "OSM report 2022-2023"
+author: "Marissa Dyck"
+date: "2024-03-25"
+output: 
+  html_document:
+    theme: journal
+    toc: yes
+    toc_float: yes
+---
+
+
+The first two chunks of this r markdown file allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+# Before you begin
+
+A few notes about this script.
+
+If you are running this with the 2022-2023 data make sure you download the whole (OSM_2022-2023 GitHub repository)[https://github.com/ACMElabUvic/OSM_2022-2023] from the ACMElabUvic GitHub. This will ensure you have all the files, data, and proper folder structure you will need to run this code and associated analyses.
+
+Also make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data. 
+
+If you have question please email the most recent author, currently   
+
+Marissa A. Dyck   
+Postdoctoral research fellow    
+University of Victoria    
+School of Environmental Studies     
+Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)      
+
+# Install packages
+
+If you don't already have the following packages installed, use the code below to install them.
+
+```{r install packages, eval=FALSE}
+
+install.packages('tidyverse') 
+install.packages('ggpubr')
+```
+
+# Load libraries
+
+Then load the packages to your library.
+
+```{r libraries}
+
+library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
+library(ggpubr) # make modificaions to plot for publication (arrange plots)
+
+```
+
+# Data
+
+## Load detection data
+
+Read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R. If you haven't run this script yet you will need to do so
+```{r data}
+
+# detection data
+# read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R 
+detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>% 
+  
+  # change site, species and event_id to factor
+  mutate_if(is.character,
+            as.factor)
+
+```
+
+## Data formatting
+
+In order to get plots that have the same formatting as last years' report we have to do a bit of data formatting. First we need to make sure we are including the same relevant species (some were ignored for last years' report) and have grouped some of the data the same way
+
+Last years report had the following species
+
+* white-tailed deer
+* snowshoe hare
+* black bear
+* coyote
+* red squirrel
+* fisher
+* unknown
+* moose
+* lynx
+* spruce grouse
+* red fox
+* striped skunk
+* ruffed grouse
+* owl
+* grey wolf
+* domestic dog
+* cougar
+* raven
+* other 
+* mule deer
+
+And they grouped all humans except for staff as 'Humans'. Let's look at the speceis we have in this year's data and try to format it the same way
+```{r data format}
+
+detections %>% 
+  
+  # group by array and species
+  group_by(array, species) %>% 
+  summarise(n = n()) %>% 
+  
+  # have R print everything
+  print(n = nrow(.))
+
+# now let's create a new data frame (tibble) to work with for the OSM figure summaries specifically
+
+# I personally would lump all the unknown together and all the birds together but for the sake of consistency with last years' figures we will remove some entries, let's create a vector of entries to drop
+
+species_drop <- c('Staff',
+                  'Unknown deer',
+                  'Unknown ungulate',
+                  'Unknown canid',
+                  'Unknown mustelid',
+                  'Other birds')
+
+# now we can create the new data frame with some changes consistent w/ choices made for 2021-2022
+detections <- detections %>% 
+  
+  # for summarizing, lets lump all the recreational humans into "Humans"
+  mutate(species = recode_factor(species, 
+                                 "Snowmobiler" = "Human",
+                                 "ATVer" = "Human",
+                                 'Hunter' = 'Human')) %>% 
+  
+  # remove species we don't want to plot
+  filter(!species %in% species_drop)
+
+```
+
+We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
+```{r data subset}
+# we will also want to create a data frame for each LU to plot individually
+
+# LU1
+dets_LU1 <- detections %>% 
+  filter(array == 'LU01')
+
+# LU13
+dets_LU13 <- detections %>% 
+  filter(array == 'LU13')
+
+# LU15
+dets_LU15 <- detections %>% 
+  filter(array == 'LU15')
+
+# LU21
+dets_LU21 <- detections %>% 
+  filter(array == 'LU21')
+
+```
+
+## ANDREW HELP
+Can you make the above code into a forloop which assigns each new data frame created from subsetting as dets_LUname?
+
+# Detection plots
+
+## Data
+
+Now we can apply the same data formatting for each LU's data frame using purrr.
+
+We want to count the number of independent detections per species per LU to use in the detection plots
+```{r det data}
+
+# apply the same formatting to each LU data frame using purrr map
+detection_data <- list(dets_LU1,
+                       dets_LU13,
+                       dets_LU15,
+                       dets_LU21) %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      # group by species
+      group_by(species) %>%
+      
+      # calculate a column with unique accounts of each species
+      mutate(count = n_distinct(event_id)) %>% 
+      
+      # keep just the columns we need
+      select(species, count) %>% 
+      
+      # keep only unique (distinct) rows so we should be left with one row per species, this helps with plotting later if you don't do it ggplot will try to count and plot each row it's annoying
+      distinct()) %>% 
+  
+  # set names of list objects
+  purrr::set_names('Detections LU01',
+                   'Detections LU13',
+                   'Detections LU15',
+                   'Detections LU21')
+
+```
+
+## Plotting
+
+Now to graph independent detections for each LU using purrr, this avoids a TON of code repetition needed to plot each one individually
+
+```{r det plots}
+# create object detection plots which uses the detection_data list (w/ all 4 LUs)
+detection_plots <- detection_data %>% 
+  
+  # use imap instead of map as it allows us to use .y to paste the list element names as the plot titles later
+  purrr::imap(
+    ~.x %>% 
+      
+      # now just copy and paste the ggplot code for the detection graphs
+      ggplot(.,
+             aes(x = reorder(species, count), y = count)) +
+      
+      # plot as bar graph using geom_col so we don't have to provide a y aesthetic
+      geom_col() +
+      
+      # switch the x and y axis
+      coord_flip() +
+      
+      # add the number of detections at the end of each bar
+      geom_text(aes(label = count),
+                color = "black",
+                size = 3,
+                hjust = -0.3,
+                vjust = 0.2) +
+      
+      # label x and y axis with informative titles
+      labs(x = 'Species',
+           y = 'Number of Independent (30 min) Detections') +
+      
+      # add title to plot with LU name the .y will take the name of whatever you named each list element in the detection_data list, so make sure this name is what you want on the ggtitle
+      ggtitle(.y) +
+      
+      # set the theme
+      theme_classic() +
+      theme(plot.title = element_text(hjust = 0.5)))
+
+# view plots, this will print each in it's own window so you have to scroll back in the plot viewer pane to look at each one
+detection_plots
+```
+
+## Save plots
+
+```{r save det plots}
+
+```
+

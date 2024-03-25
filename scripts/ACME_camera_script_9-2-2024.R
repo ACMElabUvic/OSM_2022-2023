@@ -646,7 +646,7 @@ ggplot(deploy_fixed, aes(color = array))+
   theme(axis.text = element_text(size = 6))
 
 
-# something weird is happening with a site in LU15, it has a later end date than the others by a lot. Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+# something weird is happening with a site in LU15, it has a later end date than the others by a lot (This may not show up once the correction has been made to the raw data file) Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file. 
 
 deploy_fixed %>% 
   
