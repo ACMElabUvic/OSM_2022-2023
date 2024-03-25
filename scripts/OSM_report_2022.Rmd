@@ -19,6 +19,8 @@ library(tidyverse)
 
 # Before you begin
 
+## Notes
+
 A few notes about this script.
 
 If you are running this with the 2022-2023 data make sure you download the whole (OSM_2022-2023 GitHub repository)[https://github.com/ACMElabUvic/OSM_2022-2023] from the ACMElabUvic GitHub. This will ensure you have all the files, data, and proper folder structure you will need to run this code and associated analyses.
@@ -33,7 +35,7 @@ University of Victoria
 School of Environmental Studies     
 Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)      
 
-# Install packages
+## Install packages
 
 If you don't already have the following packages installed, use the code below to install them.
 
@@ -43,7 +45,7 @@ install.packages('tidyverse')
 install.packages('ggpubr')
 ```
 
-# Load libraries
+## Load libraries
 
 Then load the packages to your library.
 
