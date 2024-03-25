@@ -139,8 +139,15 @@ OSM_2022_data_fixed <- OSM_2022_data %>%
     
     # add month and year columns from the datetime data for merging with other files later
     month = month(datetime),
-    year = year(datetime)
-    ) 
+    year = year(datetime)) %>% 
+    
+    # also split the site column (but keep original) into the LU and site
+    separate_wider_delim(site,
+                        delim = '_',
+                        names = c('array',
+                                  'camera'),
+                        cols_remove = FALSE)
+  
 
 
 # use code below  to check that each step worked
@@ -184,7 +191,8 @@ write_csv(OSM_2022_data_fixed,
 OSM_2022_det <- OSM_2022_data_fixed %>% 
   
   # select only variables of interest
-  select(site,
+  select(array,
+         site,
          species,
          datetime,
          month,
@@ -289,8 +297,7 @@ det_graph <- detections %>%
   
   ungroup() %>% 
   
-  ggplot(.,
-         aes(x = species)) +
+  ggplot(aes(x = species)) +
   
   # create bar graph of the counts of each spp in the data
   geom_bar(aes(fill = species)) +
@@ -319,7 +326,7 @@ det_graph <- detections %>%
 det_graph
 
 
-# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension) but don't use .tiff in the github repo it takes up too much space and causes issues
 ggsave('2022_indv_det_graph.jpeg',
        det_graph,
        path = 'figures',
@@ -328,6 +335,63 @@ ggsave('2022_indv_det_graph.jpeg',
        units = 'in',
        dpi = 600)
 
+
+
+
+# let's also create one that graphs each LU in it's own panel using facet_wrap
+det_plot_LUs <- detections %>% 
+  
+  # remove less useful species
+  filter(species %in% mammals) %>% 
+  
+  # group by array and species to calculate dets per spp per LU
+ group_by(array, species) %>% 
+  
+  # calculate a column with unique accounts of each species
+  reframe(count = n_distinct(event_id)) %>% 
+  
+  # pipe to ggplot and set aesthetics mapping
+  ggplot(aes(x = reorder(species, count), y = count)) +
+  
+  # plot as bar graph
+  geom_col() +
+  
+  # plot each LU in own panel
+  facet_wrap(vars(array)) +
+  
+  # add the number of detections at the end of each bar
+  geom_text(aes(label = count),
+            color = "black",
+            size = 3,
+            vjust = -0.3) +
+  
+  # label x and y axis with informative titles
+  labs(x = 'Species',
+       y = 'Number of Independent (30 min) Detections') +
+  
+  # add title to plot with LU name
+  
+  ggtitle("LU21 Detections")+
+  
+  # set the theme
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90,
+                                   vjust = 0.5,
+                                   hjust = 1,
+                                   size = 12))
+
+# view plot
+det_plot_LUs
+
+# save this plot
+
+ggsave('figures/OSM_2022_ind_det_per_LU.jpg',
+       det_plot_LUs,
+       dpi = 600,
+       width = 10,
+       height = 12,
+       units = 'in')
 
 
 # Covariate data ----------------------------------------------------------
@@ -567,6 +631,9 @@ write_csv(deploy_fixed,
 
 # Camera operability ------------------------------------------------------
 
+# if starting from this point read in data
+deploy_fixed <- read_csv('data/processed/OSM_2022_deployment.csv')
+
 # create graph of camera operability
 
 ggplot(deploy_fixed, aes(color = array))+
@@ -574,7 +641,25 @@ ggplot(deploy_fixed, aes(color = array))+
   geom_segment(aes(x = start_date, 
                    xend = end_date,
                    y = site, 
+                   yend = site)) +
+  
+  theme(axis.text = element_text(size = 6))
+
+
+# something weird is happening with a site in LU15, it has a later end date than the others by a lot. Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+
+deploy_fixed %>% 
+  
+  filter(array == 'LU15') %>% 
+  
+ ggplot(., ) +
+  
+  geom_segment(aes(x = start_date,
+                   xend = end_date,
+                   y = site, 
                    yend = site))
+
+# the site we need to check in the raw data is LU15_12
 
 # Response metrics --------------------------------------------------------
 
@@ -890,10 +975,12 @@ proportional_detections <- proportional_detections %>%
 # before we can use this data we need to adjust the columns for bears since they are hibernating we don't want to calculate their presence/absence for those inactive months
 
 # For bears we want to subset further and have months_active not include Dec-March
-months_active_bears <- months_active %>% 
   
-  # filter to months bears are active
-  filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
+# now let's recalculate the number of active months 
+months_active_bears <- deploy_active %>% 
+  
+  # filter to months bears are active (April - November)
+  dplyr::filter(month %in% c("4", "5", "6", "7", "8", "9", "10", "11")) %>% 
   
   # get distinct rows for each 
   distinct(site, month, year, 
