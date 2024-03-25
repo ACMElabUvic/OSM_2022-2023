@@ -139,8 +139,15 @@ OSM_2022_data_fixed <- OSM_2022_data %>%
     
     # add month and year columns from the datetime data for merging with other files later
     month = month(datetime),
-    year = year(datetime)
-    ) 
+    year = year(datetime)) %>% 
+    
+    # also split the site column (but keep original) into the LU and site
+    separate_wider_delim(site,
+                        delim = '_',
+                        names = c('array',
+                                  'camera'),
+                        cols_remove = FALSE)
+  
 
 
 # use code below  to check that each step worked
@@ -184,7 +191,8 @@ write_csv(OSM_2022_data_fixed,
 OSM_2022_det <- OSM_2022_data_fixed %>% 
   
   # select only variables of interest
-  select(site,
+  select(array,
+         site,
          species,
          datetime,
          month,
@@ -289,8 +297,7 @@ det_graph <- detections %>%
   
   ungroup() %>% 
   
-  ggplot(.,
-         aes(x = species)) +
+  ggplot(aes(x = species)) +
   
   # create bar graph of the counts of each spp in the data
   geom_bar(aes(fill = species)) +
@@ -319,7 +326,7 @@ det_graph <- detections %>%
 det_graph
 
 
-# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension) but don't use .tiff in the github repo it takes up too much space and causes issues
 ggsave('2022_indv_det_graph.jpeg',
        det_graph,
        path = 'figures',
@@ -329,63 +336,63 @@ ggsave('2022_indv_det_graph.jpeg',
        dpi = 600)
 
 
-<<<<<<< HEAD
-# let's also graph the detections separately for each LU, we can do this in one ggplot using facet_wrap or facet_grid
 
-ind_det_per_array_2022 <-  detections %>% 
+
+# let's also create one that graphs each LU in it's own panel using facet_wrap
+det_plot_LUs <- detections %>% 
   
   # remove less useful species
   filter(species %in% mammals) %>% 
   
-  # get the number of individual detections per species to add to graph
-  group_by(array, species) %>%  
+  # group by array and species to calculate dets per spp per LU
+ group_by(array, species) %>% 
   
   # calculate a column with unique accounts of each species
-  summarise(count = n_distinct(event_id)) %>%  
+  reframe(count = n_distinct(event_id)) %>% 
   
+  # pipe to ggplot and set aesthetics mapping
   ggplot(aes(x = reorder(species, count), y = count)) +
   
-  # plot as bar graph using geom_col so we don't have to provide a y aesthetic
+  # plot as bar graph
   geom_col() +
   
+  # plot each LU in own panel
   facet_wrap(vars(array)) +
   
-  # add the number of detections above each bar using the variable n we calculated earlier
-  geom_text(aes(label = count,
-                y = count + 50),
-            size = 4) +
+  # add the number of detections at the end of each bar
+  geom_text(aes(label = count),
+            color = "black",
+            size = 3,
+            vjust = -0.3) +
   
-  # change y axis label
+  # label x and y axis with informative titles
   labs(x = 'Species',
-       y = 'Number of independent (30 min) detections',
-       title = 'Independents Detections per Landscape Unit (LU)') +
+       y = 'Number of Independent (30 min) Detections') +
   
-  # change breaks for y axis
-  scale_y_continuous(breaks = seq(0,3500, by = 250)) +
+  # add title to plot with LU name
   
-  # change theme elements
-  theme(axis.text.x = element_text(angle = 90,
+  ggtitle("LU21 Detections")+
+  
+  # set the theme
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90,
                                    vjust = 0.5,
                                    hjust = 1,
-                                   size = 14),
-        axis.title = element_text(size = 16),
-        axis.ticks.x = element_blank(),
-        panel.grid = element_blank(),
-        plot.title = element_text(hjust = 0.5)) 
+                                   size = 12))
 
 # view plot
-ind_det_per_array_2022
+det_plot_LUs
 
-# save figure
-ggsave('figures/ind_det_per_array_2022.jpg',
-       ind_det_per_array_2022,
+# save this plot
+
+ggsave('figures/OSM_2022_ind_det_per_LU.jpg',
+       det_plot_LUs,
        dpi = 600,
-       width = 13,
-       height = 15,
+       width = 10,
+       height = 12,
        units = 'in')
 
-=======
->>>>>>> parent of 225b984 (dyck updates 3-25-24)
 
 # Covariate data ----------------------------------------------------------
 
