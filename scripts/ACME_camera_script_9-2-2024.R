@@ -329,6 +329,63 @@ ggsave('2022_indv_det_graph.jpeg',
        dpi = 600)
 
 
+<<<<<<< HEAD
+# let's also graph the detections separately for each LU, we can do this in one ggplot using facet_wrap or facet_grid
+
+ind_det_per_array_2022 <-  detections %>% 
+  
+  # remove less useful species
+  filter(species %in% mammals) %>% 
+  
+  # get the number of individual detections per species to add to graph
+  group_by(array, species) %>%  
+  
+  # calculate a column with unique accounts of each species
+  summarise(count = n_distinct(event_id)) %>%  
+  
+  ggplot(aes(x = reorder(species, count), y = count)) +
+  
+  # plot as bar graph using geom_col so we don't have to provide a y aesthetic
+  geom_col() +
+  
+  facet_wrap(vars(array)) +
+  
+  # add the number of detections above each bar using the variable n we calculated earlier
+  geom_text(aes(label = count,
+                y = count + 50),
+            size = 4) +
+  
+  # change y axis label
+  labs(x = 'Species',
+       y = 'Number of independent (30 min) detections',
+       title = 'Independents Detections per Landscape Unit (LU)') +
+  
+  # change breaks for y axis
+  scale_y_continuous(breaks = seq(0,3500, by = 250)) +
+  
+  # change theme elements
+  theme(axis.text.x = element_text(angle = 90,
+                                   vjust = 0.5,
+                                   hjust = 1,
+                                   size = 14),
+        axis.title = element_text(size = 16),
+        axis.ticks.x = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(hjust = 0.5)) 
+
+# view plot
+ind_det_per_array_2022
+
+# save figure
+ggsave('figures/ind_det_per_array_2022.jpg',
+       ind_det_per_array_2022,
+       dpi = 600,
+       width = 13,
+       height = 15,
+       units = 'in')
+
+=======
+>>>>>>> parent of 225b984 (dyck updates 3-25-24)
 
 # Covariate data ----------------------------------------------------------
 
