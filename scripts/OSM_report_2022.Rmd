@@ -561,6 +561,27 @@ Now we need to subset the data by buffer size so we have separate data frames fo
 
 # subset the data by buffer width, would like Andrew to make this into a forloop eventually
 
+buffer_frames<-list()
+
+for (i in unique(covaraites_grouped$buff_dist)){
+  
+  print(i)
+  
+  #Subset data based on radius
+  df<-covaraites_grouped%>%
+    filter(buff_dist == i)
+  
+  #rename dataframe on the fly
+  assign(paste("df", i, sep ="_"), df)
+  
+  #list of dataframes
+  buffer_frames<-c(buffer_frames, list(df))
+  
+}
+
+
+
+
 ```
 
 ## Exploratory plots
