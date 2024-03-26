@@ -43,6 +43,7 @@ If you don't already have the following packages installed, use the code below t
 
 install.packages('tidyverse') 
 install.packages('ggpubr')
+install.packages('corrplot')
 ```
 
 ## Load libraries
@@ -53,6 +54,7 @@ Then load the packages to your library.
 
 library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
 library(ggpubr) # make modificaions to plot for publication (arrange plots)
+library(PerformanceAnalytics)    #Used to generate a correlation plot
 
 ```
 
@@ -258,7 +260,8 @@ detection_plots
 
 Now we want to save these plots in case we need each individual one (we will combine the detection and naive occ plots into a single figure for each LU later and use those for the OSM report, but we may want these standalone plots later so let's save them while they are here).
 
-We can save all the plots from the purrr iteration above using `purrr::imap`. imap is used instead of map because it allows us to retain the list object names (plot names) to paste as the file name with the .y command. 
+We can save all the plots from the purrr iteration above using `purrr::imap`. imap is used instead of map because it allows us to retain the list object names (plot names) to paste as the file name with the .y command.
+
 > IMPORTANT if you are using this code for a future github repo, DO NOT use .tiff as the file extension. This will cause issues when trying to push any changes to the github repo as the files are too large to meet githubs requirements
 
 ```{r save det plots}
@@ -548,10 +551,28 @@ covaraites_grouped <- covariates %>%
             other_transportation_features,
             pasture,
             residences
-            ))
+            )) %>% 
+  
+  # reorder variables
+  relocate(c(pipeline,
+             transmission_line,
+             borrowpits),
+           .after = lc_class230)
 
 # see what's left
 names(covaraites_grouped)
+
+# check the structure of new data
+str(covaraites_grouped)
+
+# check summary of new data
+summary(covaraites_grouped)
+
+# there are some NAs in the data which will cause problems with modeling/visualization of data ignore for now but will explore these sites specifically after report
+
+covaraites_grouped <- covaraites_grouped %>% 
+  
+  na.omit()
 ```
 
 
@@ -580,15 +601,103 @@ for (i in unique(covaraites_grouped$buff_dist)){
 }
 
 
+# name list objects so we can extract names for plotting 
 
+buffer_frames <- buffer_frames %>% 
+  
+  # absurdly long way to do this but for sake of time fuck it
+  purrr::set_names('250 meter buffer',
+                   '500 meter buffer',
+                   '750 meter buffer',
+                   '1000 meter buffer',
+                   '1250 meter buffer',
+                   '1500 meter buffer',
+                   '1750 meter buffer',
+                   '2000 meter buffer',
+                   '2240 meter buffer',
+                   '2500 meter buffer',
+                   '2750 meter buffer',
+                   '3000 meter buffer',
+                   '3250 meter buffer',
+                   '3500 meter buffer',
+                   '3750 meter buffer',
+                   '4000 meter buffer',
+                   '4250 meter buffer',
+                   '4500 meter buffer',
+                   '4750 meter buffer',
+                   '5000 meter buffer')
+  
+  
 
 ```
+
 
 ## Exploratory plots
 
 > add this section in later when we have more time to explore the covariates and choose which should be inlcuded etc.
 
+
 ## Correlation plots
 
-Let's make correlation plots for these variables
+Let's make correlation plots for these variables, we can use purrr to make them all with one section of code
+
+```{r correlation plots}
+
+correlation_plots <- buffer_frames %>%
+
+  # use purrr to do the same manipulation to all buffer data frames
+  purrr::imap(
+    ~.x %>%
+      
+      # select only numeric columns for correlation plot
+      select(where(is.numeric)) %>%
+      
+      # ectract correlation values
+      cor() %>%
+    
+      # pipe into corrplot function
+      corrplot::corrplot(type = 'upper',
+                         tl.col = 'black',
+                         title = paste0('Variable correlation plot at', .y)))
+  
+  
+  
+
+# title = paste0('Variable correlation plot at', .y))
+
+
+# buffer_frames$`1000 meter buffer` %>%
+#   
+#   select(where(is.numeric)) %>% 
+#   
+#   cor() %>% 
+#   
+#   corrplot::corrplot(.,
+#                      type = 'upper',
+#                      tl.col = 'black')
+           
+
+ 
+
+```
+Now we can save all these correlation plots using ggsave?
+
+#ANDREW HELP
+
+I need to save all these plots but they are saved as a different kind of object in the list than the ggplots I made earlier were and so purrr::imap and ggsave don't like them. Do you have code to save all the correlation plots I generated above?
+
+```{r save cor plots}
+
+# purrr::imap(
+#   correlation_plots,
+#   ~ggsave(.x,
+#           file = paste0("figures/",
+#                         .y,
+#                         '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+#           dpi = 600,
+#           width = 11,
+#           height = 9,
+#           units = 'in'))
+
+```
 
