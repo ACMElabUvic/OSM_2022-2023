@@ -699,5 +699,35 @@ I need to save all these plots but they are saved as a different kind of object 
 #           height = 9,
 #           units = 'in'))
 
+
+#Couldn't get it to work with the buffer_frames list, was giving me grief. So I took it back to the orriginal covaraites_grouped frame
+#subset the data to the current buff_dist
+#I couldn't figure out how to access the correlation plots from the list, so here I just save them on the fly with the png and dev.off pair
+#You could modify this to save to a list as well if you wanted though
+
+for (i in unique(covaraites_grouped$buff_dist)){
+  
+  print(i)
+  
+  #Subset data based on radius
+  df<-covaraites_grouped%>%
+    filter(buff_dist == i)%>%
+    select(where(is.numeric))
+  
+ #compute a correlation matrix (watch for errors)
+ matrix<-cor(df)
+ 
+ #print and save the correlation plot on the go
+ #renaming for each buffer as we do
+ png(file.path("figures/", paste("correlation_", i, ".png")))
+ corrplot::corrplot(matrix,
+                    type = 'upper',
+                    tl.col = 'black',
+                    title = paste0('Variable correlation plot at ', i))
+ dev.off()
+  
+}
+
+
 ```
 
