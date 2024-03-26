@@ -9,8 +9,6 @@ output:
     toc_float: yes
 ---
 
-
-The first two chunks of this r markdown file allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -25,7 +23,9 @@ A few notes about this script.
 
 If you are running this with the 2022-2023 data make sure you download the whole (OSM_2022-2023 GitHub repository)[https://github.com/ACMElabUvic/OSM_2022-2023] from the ACMElabUvic GitHub. This will ensure you have all the files, data, and proper folder structure you will need to run this code and associated analyses.
 
-Also make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data. 
+Also make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data.
+
+Lastly, if you are looking to adapt this code for a future year of data, you will want to ensure you have run the ACME_camera_script_9-2-2024.R or .Rmd with your data as there is much data formatting, cleaning, and restructuring that has to be done before this code will work.
 
 If you have question please email the most recent author, currently   
 
@@ -60,7 +60,8 @@ library(ggpubr) # make modificaions to plot for publication (arrange plots)
 
 ## Load detection data
 
-Read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R. If you haven't run this script yet you will need to do so
+Read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R.
+
 ```{r data}
 
 # detection data
@@ -75,7 +76,7 @@ detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>%
 
 ## Data formatting
 
-In order to get plots that have the same formatting as last years' report we have to do a bit of data formatting. First we need to make sure we are including the same relevant species (some were ignored for last years' report) and have grouped some of the data the same way
+In order to get plots that have the same formatting as last years' report we have to do a bit of data formatting. First we need to make sure we are including the same relevant species (some were ignored for last years' report or grouped together)
 
 Last years report had the following species
 
@@ -100,7 +101,8 @@ Last years report had the following species
 * other 
 * mule deer
 
-And they grouped all humans except for staff as 'Humans'. Let's look at the speceis we have in this year's data and try to format it the same way
+And they grouped all humans except for staff as 'Humans'. Let's look at the species we have in this year's data and try to format it the same way
+
 ```{r data format}
 
 detections %>% 
@@ -138,6 +140,7 @@ detections <- detections %>%
 ```
 
 We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
+
 ```{r data subset}
 # we will also want to create a data frame for each LU to plot individually
 
@@ -162,13 +165,15 @@ dets_LU21 <- detections %>%
 ## ANDREW HELP
 Can you make the above code into a forloop which assigns each new data frame created from subsetting as dets_LUname?
 
+
 # Detection plots
 
-## Data
+## Detection data
 
-Now we can apply the same data formatting for each LU's data frame using purrr.
+Now we can apply the same data formatting for each LUs' data frame using purrr.
 
 We want to count the number of independent detections per species per LU to use in the detection plots
+
 ```{r det data}
 
 # apply the same formatting to each LU data frame using purrr map
@@ -200,9 +205,13 @@ detection_data <- list(dets_LU1,
 
 ```
 
-## Plotting
+## Detection plots
 
 Now to graph independent detections for each LU using purrr, this avoids a TON of code repetition needed to plot each one individually
+
+We use `purrr::imap()` instead of `purrr::map()` because imap maintains the variable names in our list (e.g. Detections LU01, Detections LU13, etc.) which we can then use to title each plot.
+
+Within `purrr::imap()` we just paste the code we would use for a single ggplot since all the graphical elements (except the title which we change with the file name [.y]) are the same
 
 ```{r det plots}
 # create object detection plots which uses the detection_data list (w/ all 4 LUs)
@@ -242,11 +251,323 @@ detection_plots <- detection_data %>%
 
 # view plots, this will print each in it's own window so you have to scroll back in the plot viewer pane to look at each one
 detection_plots
+
 ```
 
-## Save plots
+## Save detection plots
+
+Now we want to save these plots in case we need each individual one (we will combine the detection and naive occ plots into a single figure for each LU later and use those for the OSM report, but we may want these standalone plots later so let's save them while they are here).
+
+We can save all the plots from the purrr iteration above using `purrr::imap`. imap is used instead of map because it allows us to retain the list object names (plot names) to paste as the file name with the .y command. 
+> IMPORTANT if you are using this code for a future github repo, DO NOT use .tiff as the file extension. This will cause issues when trying to push any changes to the github repo as the files are too large to meet githubs requirements
 
 ```{r save det plots}
 
+# save plots only use if needed
+purrr::imap(
+  detection_plots,
+  ~ggsave(.x,
+             file = paste0("figures/",
+                           .y,
+                           '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+          dpi = 600,
+          width = 11,
+          height = 9,
+          units = 'in'))
+
 ```
+
+# Naive occupancy
+
+## Data
+
+We also need to alter the detection data a bit to use for naive occupancy plots. 
+
+We will use the individual LU detection data like we did before and use `purrr::map()` to apply the dame data formatting to all 4 data frames.
+
+Here we want to calculate the total number of sites in each LU, the number of sites each species was detected at in each LU and then use both those numbers to calculate naive occupancy for each species in each LU
+
+```{r occ data}
+
+# First we need to alter the data frame a bit for these plots, let's create a data frame for each LU (I couldn't figure out how to do this without assigning individual data frames for each UGH)
+
+
+# apply the same formatting to each data frame using purrr
+occupancy_data <- list(dets_LU1,
+                       dets_LU13,
+                       dets_LU15,
+                       dets_LU21) %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      # calculate the total number of sites for each LU
+      mutate(total_sites = n_distinct(site)) %>% 
+      
+      # group by species to calculate the number of sites each spp occurred at
+      group_by(species) %>% 
+  
+      # add columns to count the number of sites each spp occurred at and then the naive occupancy
+  reframe(count = n_distinct(site),
+          naive_occ = count/total_sites,
+          ind_det = n_distinct(event_id)) %>% 
+  
+    # keep just the columns we need
+  select(species, naive_occ, ind_det) %>% 
+  
+    # keep only unique (distinct) rows so we should be left with one row per species, this helps with plotting
+  distinct()) %>% 
+  
+  purrr::set_names('Naive Occupancy LU01',
+                   'Naive Occupancy LU13',
+                   'Naive Occupancy LU15',
+                   'Naive Occupancy LU21')
+```
+
+## Occupancy plots
+
+Now we can graph naive occupancy for each LU using purrr, and as with the detection plots this saves a massive amount of coding using purrr to run an iteration on the data files and produce four plots at once instead of copying and pasting code for each individually
+
+```{r occ plots}
+# create object occupancy_plots which uses the occupancy_data list (w/ all 4 LUs)
+occupancy_plots <- occupancy_data %>% 
+  
+  # use imap instead of map as it allows us to use .y to paste the list element names as the plot titles later
+  purrr::imap(
+    ~.x %>% 
+
+      # now just copy and paste the ggplot code for the occupancy graphs
+      ggplot(.,
+             aes(x = fct_reorder(species,
+                                 ind_det), # this reorders the species so they match the order of the detection plot which makes it better for viewing when the plots are arranged together in 1 figure for each LU
+                 y = naive_occ)) +
+      
+      # plot as bars using geom_col() which uses stat = 'identity', instead of geom_bar() which will count the rows in each group and plot that instead of naive occ
+      geom_col() +
+      
+      # flip x and y axis 
+      coord_flip() +
+      
+      # add text to end of bars that provides naive occ value
+      geom_text(aes(label = round(naive_occ, 2)), 
+                size = 3, 
+                hjust = -0.3, 
+                vjust = 0.2) +
+      
+      # relabel x and y axis and title
+      labs(x = 'Species',
+           y = 'Proportion of Sites With At Least One Detection') +
+      
+      # set plot title using .y (name of list object)
+      ggtitle(.y) +
+      
+      # set. theme elements
+      theme_classic()+
+      theme(plot.title = element_text(hjust = 0.5)))
+
+# view plots
+occupancy_plots
+```
+
+## Save occupancy plots
+
+As with the detection plots, we might want these individual plots later for something so we can use `purrr::imap()` to save them to the figures folder
+
+Again avoid using the .tiff extension in github
+
+```{r save occ plots}
+
+# save plots 
+purrr::imap(
+  occupancy_plots,
+  ~ggsave(.x,
+          file = paste0("figures/",
+                        .y,
+                        '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+          dpi = 600,
+          width = 11,
+          height = 9,
+          units = 'in'))
+
+```
+
+# Final combined plots for report
+
+The previous year's report had a figure for each LU with the detections plot on the top and the occupancy plot on the bottom so we will recreate these for this year using `ggarrange()`.
+
+Unfortunately I could not figure out how to do this in purrr to reduce coding but luckily it isn't too much repitition
+
+```{r combine plots}
+
+# not sure I know how to do the following section in purrr just yet, but we've saved a ton of coding so far and it doesn't take much to arrange each of these individually
+
+# LU1
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU1_det_occ_plots <- ggarrange(detection_plots$`Detections LU01`, occupancy_plots$`Naive Occupancy LU01`,
+                               labels = c("A", "B"),
+                               nrow = 2)
+
+# view plot
+LU1_det_occ_plots
+
+# LU13
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU13_det_occ_plots <- ggarrange(detection_plots$`Detections LU13`, occupancy_plots$`Naive Occupancy LU13`,
+                               labels = c("A", "B"),
+                               nrow = 2)
+
+# view plot
+LU13_det_occ_plots
+
+
+# LU15
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU15_det_occ_plots <- ggarrange(detection_plots$`Detections LU15`, occupancy_plots$`Naive Occupancy LU15`,
+                                labels = c("A", "B"),
+                                nrow = 2)
+
+# view plot
+LU15_det_occ_plots
+
+
+# LU21
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU21_det_occ_plots <- ggarrange(detection_plots$`Detections LU21`, occupancy_plots$`Naive Occupancy LU21`,
+                                labels = c("A", "B"),
+                                nrow = 2)
+
+# view plot
+LU21_det_occ_plots
+
+```
+
+We can however, save all the figures again using purrr
+
+```{r save combine plots}
+
+# save all figures at once using purrr
+final_det_occ_plots <- list(LU1_det_occ_plots,
+                            LU13_det_occ_plots,
+                            LU15_det_occ_plots,
+                            LU21_det_occ_plots) %>% 
+  
+
+  purrr::set_names('LU01_det_occ_plots',
+                   'LU13_det_occ_plots',
+                   'LU15_det_occ_plots',
+                   'LU21_det_occ_plots') %>% 
+  
+  purrr::imap(
+    ~ggsave(.x,
+            file = paste0("figures/",
+                          .y,
+                          '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+            dpi = 600,
+            width = 12,
+            height = 15,
+            units = 'in'))
+
+```
+
+# Analysis
+
+## Read in data
+
+We need the proportional binomial data and the covariate data (from the ACME_camera_script_9-2-2024.R or .Rmd), let's read those in now and check the structure of each
+
+```{r read data}
+
+# response metric (proportional detections from the from the ACME_camera_script_9-2-2024.R or .Rmd)
+prop_detections <- read_csv('data/processed/OSM_2022_proportional_detections.csv')
+
+# check variable structure
+str(prop_detections)
+
+# model covariates (merged HFI and VEG data from the ACME_camera_script_9-2-2024.R or .Rmd)
+covariates <- read_csv('data/processed/OSM_2022_covariates.csv',
+                       
+                       # set the column types to read in correctly
+                       col_types = cols(site = col_factor(),
+                                        buff_dist = col_factor(),
+                                        .default = col_number()))
+
+# check variable structure
+str(covariates)
+
+```
+
+## Format covariates
+
+There are too many covariates to include in the models individually and many of them describe similar HFI features. We can use the info from the README file in this repository which includes detailed descriptions from 
+the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html) **OR** in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf).
+
+> the current version of this code for the purposes of the 2022-2023 report used a merged dataset from 2021-2022 and 2022-2023 data, howver each year of data the variables were extracted slightly differenty from GIS so final version of this code will include a different formatting process which will likely occur in the ACME_camera_script_9-2-2024.R or .Rmd
+
+```{r format covariates}
+
+# reorder colnames alphabetically to view easier
+covariates_ordered <- covariates %>% 
+  
+  select(order(colnames(.)))
+
+
+covaraites_grouped <- covariates %>% 
+  
+  mutate(borrowpits = rowSums(across(contains('borrowpit'))),
+         inustrial_sites = camp_industrial + oil_gas_plant + open_pit_mine + 
+           rowSums(across(contains('facility'))),
+         seismic_lines = rowSums(across(contains('seismic'))),
+         wellsites = rowSums(across(contains('well'))),
+         roads =  rowSums(across(contains('road'))),
+         havest_areas = rowSums(across(contains('harvest'))),
+         trails = rowSums(across(contains('trail'))),
+         residences = rowSums(across(contains('residence'))),
+         pasture = rowSums(across(contains('pasture'))),
+         other_transportation_features = runway + airp_runway + rlwy_sgl_track + vegetated_edge_railways,
+         crops = crop + fruit_vegetables + cultivation_abandoned,
+         water = lagoon + reservoir + dugout + canal,
+         .keep = 'unused') %>% 
+  
+  # remove features we don't need
+  select(!c(recreation,
+            clearing_unknown,
+            cfo,
+            grvl_sand_pit,
+            transfer_station,
+            campground,
+            surrounding_veg,
+            urban_industrial,
+            landfill,
+            sump,
+            water,
+            crops,
+            other_transportation_features,
+            pasture,
+            residences
+            ))
+
+# see what's left
+names(covaraites_grouped)
+```
+
+
+Now we need to subset the data by buffer size so we have separate data frames for each buffer 
+
+```{r subset data by buffer}
+
+# subset the data by buffer width, would like Andrew to make this into a forloop eventually
+
+```
+
+## Exploratory plots
+
+> add this section in later when we have more time to explore the covariates and choose which should be inlcuded etc.
+
+## Correlation plots
+
+Let's make correlation plots for these variables
 
