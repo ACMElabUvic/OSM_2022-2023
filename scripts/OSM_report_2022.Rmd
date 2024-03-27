@@ -738,29 +738,30 @@ Now we are going to run a global model which includes all HFI and LC variables t
 
 We don't need to do ALL the species since many don't have enough data.
 
-
 > Refer to the ACME_camera_script_9-2-2024.html or .Rmd the plot for proportional monthly detections should provide info on which species we have enough data for, can be found under Response metrics/3.Proportion monthly detections
 
 A brief look at this fig indicates that we have enough for all the mammals in the prop_detections data frame **except**
 
 * cougar    
 * wolverine  
-* caribou??? (may have enough may not)
+* caribou??? (may have enough, may not)
 
 
 ## Black bear 
 
-## ANDREW/MARISSA FIX later
+## ANDREW/MARISSA FIX later??
 
-> there is probably a way to shorten the following code to select particular species, I saw Andrew's for loop in the draft script he wrote but couldn't quite figure it out so I did this instead, maybe we can merge approaches?
+> there is probably a way to shorten the following code to select particular species, I saw Andrew's for loop in the draft script he wrote but couldn't quite figure out how to adapt it to my purposes with the data formatted the way I have it, so I did this instead, maybe we can merge approaches later to clean this up?
 
 
 ### Global model
 
 Let's start with bears and use purrr to create a global model for every buffer distance
 
+Recall `purrr::map()` is magical for iterations and will apply all the functions within the `map()` function to each item of the list supplied before the the `map()` function.
 ```{r black bear global model}
 
+# create models for black bears at each buffer size
 black_bear_mods <- final_df %>%
 
   # use purrr map to fun the same functions for all buffer sizes ((all objects in list))
@@ -792,7 +793,7 @@ black_bear_mods <- final_df %>%
 
 ### Model selection
 
-We will use the `model.sel()` function from the *MuMIn* package to compare the global models for each buffer width and see which buffer fits the bear data best
+We will use the `model.sel()` function from the *MuMIn* package to compare the global models for each buffer width and see which buffer fits the black bear data best
 ```{r black bear mod selection}
 
 model.sel(black_bear_mods)
@@ -801,8 +802,9 @@ model.sel(black_bear_mods)
 
 > hmmmm seems fishy to me that the 250 meter buffer which is the only one that had missing data would perform THAT much better than all the others, and really you shouldn't compare models if they aren't run on the same data, hence the warning message
 
-Let's remove the 250 buffer and see what happens
+Let's remove the 250 buffer and see what happens. To do this we can use the `discard_at()` function in the *purr* package which will remove a list element based on it's name (e.g. '250 meter buffer').
 
+After that we will rerun the model selection again and see if it looks better
 ```{r remove 250 buffer}
 
 black_bear_mods_no250 <- black_bear_mods  %>% 
@@ -817,10 +819,10 @@ model.sel(black_bear_mods_no250)
 
 > this looks much more realistic; the 500 m buffer is top model for black bears
 
-So what we will do for each species is remove the 250 meter buffer for now since there are some data missing. and compare just the other buffer sizes that contain the full data set
+So what we will do for each species is remove the 250 meter buffer for now since there are some data missing, and compare just the other buffer sizes that contain the full data set
 
 
-### Model summary
+### Model summary 500m
 
 Let's take a look at the model summary for the top model
 
@@ -837,10 +839,11 @@ Let's repeat this process for each species that we have enough data for.
 
 We may or may not have enough data for caribou but let's try it at least for this preliminary report
 
-We can use the same code from black beasr (above) to run global models for each buffer width **except remember we want to remove 250 meters**
+We can use the same code from black bears (above) to run global models for each buffer width **except remember we want to remove 250 meters**
 
 And in the same chunk to save time let's also run the `model.sel()` function
 
+### Models/Model selection
 ```{r caribou mods}
 
 caribou_mods_no250 <- final_df %>%
@@ -878,6 +881,8 @@ We get a warning that there are some model convergence problems, I expect this i
 
 >For caribou 1250m buffer is top model *for now*
 
+### Model summary 1250m
+
 Let's take a closer look at the top model summary
 ```{r caribou 1250 summary}
 
@@ -888,6 +893,7 @@ There's nothing that catches my eye immediately as being sus about this particul
 
 ## Coyote
 
+### Models/Model selection
 ```{r coyote mods}
 
 coyote_mods_no250 <- final_df %>%
@@ -923,6 +929,8 @@ model.sel(coyote_mods_no250)
 
 > for coyote top model appears to be 4500 m by quite a bit
 
+### Model summary 4500m
+
 Let's get the model summary for this model
 
 ```{r coyote 4500 summary}
@@ -933,6 +941,7 @@ There is one lc class with a **very** high estimate and SE which seems a bit sus
 
 ## Fisher
 
+### Models/Model selection
 ```{r fisher mods}
 
 fisher_mods_no250 <- final_df %>%
@@ -967,6 +976,9 @@ model.sel(fisher_mods_no250)
 ```
 > For fisher top model is 2000 meter
 
+
+### Model summary 2000m
+
 Let's print the summary for this model
 
 ```{r fisher 2000 summary}
@@ -976,6 +988,8 @@ summary(fisher_mods_no250$`2000 meter buffer`)
 Again lc_class34 has a very high standard error, we may not have enough data in this landcover class to use in the final analysis
 
 ## Grey wolf
+
+### Models/Model selection
 
 ```{r wolf mods}
 
@@ -1011,6 +1025,8 @@ model.sel(wolf_mods_no250)
 ```
 > For grey wolf top model is 4500 m buffer
 
+### Model summary 4500m
+
 Let's get the model summary for this model
 
 ```{r wolf 4500 summary}
@@ -1020,6 +1036,8 @@ summary(wolf_mods_no250$`4500 meter buffer`)
 lc_class34 still presenting some issues, interesting that seismic lines weren't significant and have a negative estimate
 
 ## Lynx
+
+### Models/Model selection
 
 ```{r lynx mods}
 
@@ -1056,6 +1074,8 @@ model.sel(lynx_mods_no250)
 
 > For lynx the top model is the 1000 m buffer
 
+### Model summary 1000m
+
 Let's get the model summary
 
 ```{r lynx 1000 summary}
@@ -1064,6 +1084,8 @@ summary(lynx_mods_no250$`1000 meter buffer`)
 ```
 
 ## Moose
+
+### Models/Model selection
 
 ```{r moose mods}
 
@@ -1100,6 +1122,8 @@ model.sel(moose_mods_no250)
 
 > For moose the top model is the 3750 m buffer
 
+### Model summary 3750m
+
 Let's get the model summary
 
 ```{r moose 3750 summary}
@@ -1108,6 +1132,8 @@ summary(moose_mods_no250$`3750 meter buffer`)
 ```
 
 ## Red fox
+
+### Models/Model selection
 
 ```{r fox mods}
 fox_mods_no250 <- final_df %>%
@@ -1144,6 +1170,8 @@ model.sel(fox_mods_no250)
 
 > For red fox the top model is 3750 m buffer
 
+### Model summary 3750m
+
 Let's get the model summary
 
 ```{r fox summary 3750}
@@ -1153,6 +1181,8 @@ summary(fox_mods_no250$`3750 meter buffer`)
 Gagh! Borrow pits does not have a reasonable estimate and SE
 
 ## White-tailed deer
+
+### Models/Model selection
 
 ```{r deer mods}
 
@@ -1189,6 +1219,8 @@ model.sel(deer_mods_no250)
 ```
 > For deer the top model was also the 3750 buffer
 
+### Model summary 3750m
+
 Let's get the model summary
 
 ```{r deer 3750 summary}
@@ -1198,42 +1230,19 @@ summary(deer_mods_no250$`3750 meter buffer`)
 
 # Coefficient plots
 
+What we need to do now is extract the coefficient estimates from each top model, as well as the 95% CI so we can plot them for easier visualization and understanding of the data
 
-This is also a dog shit way to do this but I need to get this done
-```{r}
 
-coeffs <- confint(black_bear_mods_no250$`500 meter buffer`) %>% 
-  
-  as_tibble() %>%
-  
-  # subset to just the HFI variables for these plots
-    slice_head(n = 6) %>% 
-  
-  # add a column where we can put the feature names
-  rowid_to_column() %>% 
-  
-  # rename the columns
-  rename('lower' = `2.5 %`,
-         'upper' = `97.5 %`,
-         'estimate' = Estimate,
-         'feature' = rowid) %>% 
-  
-  # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
-  mutate(feature = as.factor(feature),
-         feature = recode(feature,
-                          '1' = 'seismic_lines',
-                          '2' = 'pipeline',
-                          '3' = 'borrowpits',
-                          '4' = 'wellsites',
-                          '5' = 'roads',
-                          '6' = 'trails'))
-  
-# print
- coeffs
-```
-Try ad do this for all top models at once with purrr
-```{r}
+## Extract coefficients
 
+The `confint()` function will extract the coefficients and CI intervals from a model, so what we need to do is make a list of all the models, then use the `map()` function in *purrr* to apply the `confint()` function to all the models and get the coefficients. We want this to result in a tibble that has a column for the HFI feature (we aren't plotting the lc_class data for this report), the upper and lower CI, and the coefficient estimate.
+
+In order to do this we have to do a bit of data wrangling, currently this isn't the most pleasing way to accomplish the desired outcome, but it works. 
+```{r extract coeffs}
+
+# This is also a dog shit way to do this but I need to get this done
+
+# make a list of the top models for each species
 top_models <- list(black_bear_mods_no250$`500 meter buffer`,
                    caribou_mods_no250$`1250 meter buffer`,
                    coyote_mods_no250$`4500 meter buffer`,
@@ -1244,12 +1253,14 @@ top_models <- list(black_bear_mods_no250$`500 meter buffer`,
                    fox_mods_no250$`3750 meter buffer`,
                    deer_mods_no250$`3750 meter buffer`) %>%  
   
-  # use purrr to create coefficient table for all models
+  # pipe into purrr to create coefficient table for all models
   purrr::map(
     ~.x %>% 
       
+      # extract the coefficients and upper and lower CI
       confint() %>% 
  
+      # format resulting object as a tibble data frame
       as_tibble() %>%
       
       # subset to just the HFI variables for these plots
@@ -1258,7 +1269,7 @@ top_models <- list(black_bear_mods_no250$`500 meter buffer`,
       # add a column where we can put the feature names
       rowid_to_column() %>% 
       
-      # rename the columns
+      # rename the columns for plotting
       rename('lower' = `2.5 %`,
              'upper' = `97.5 %`,
              'estimate' = Estimate,
@@ -1274,6 +1285,7 @@ top_models <- list(black_bear_mods_no250$`500 meter buffer`,
                               '5' = 'roads',
                               '6' = 'trails'))) %>% 
   
+  # set the names of each resulting tibble data frame to the species name
   purrr::set_names('Black bear',
                    'Caribou',
                    'Coyote',
@@ -1285,12 +1297,81 @@ top_models <- list(black_bear_mods_no250$`500 meter buffer`,
                    'White-tailed deer')
 ```
 
-Merge data into one data frame
+## Merge data frames
+Now we have a data frame with the bet coefficients for each species, but if we want these on a plot together we need them all in one data frame. 
 
-```{r}
+To merge data into one data frame we can use the `list_rbind()` function from the *purrr* package which will take each element of the list and stack them on top of one another just like rbind does with data frames, and if we use the names_to argument we can extract the names of the list elements and assign them to a column so we know which data comes from which species model (list element)
+
+In this code I also add a new column called uuid which contains the image id (uuid) for a phylopic silhouette of each species that I may want to use for plotting
+
+[Phylopic.or](https://www.phylopic.org/) is an open source online database of silhouettes various contributors have created for use. There is an R package that works with this data called *rphylopic*; we can use the `get_uuid()` function from this package to extract the data for a silhouette for each species we want, which is what I've done here.
+
+
+```{r rbind coeffs}
+
+# combine all list elements 
 coeffs_df_all <- list_rbind(top_models,
                             names_to = 'species') %>% 
   
+  # change species to a factor for plotting
+  mutate(species = as.factor(species),
+         
+         # add phylopic uuid for each species for plotting 
+         # the uuid is extracted using getuuid with the species name as name = ''
+         uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
+                          species == 'Caribou' ~ get_uuid(name = 'Rangifer tarandus'),
+                          species == 'Coyote' ~ get_uuid(name = 'Canis latrans'),
+                          species == 'Fisher' ~ get_uuid(name = 'Pekania pennanti'),
+                          species == 'Grey wolf' ~ get_uuid(name = 'Canis lupus'),
+                          species == 'Lynx' ~ get_uuid(name = 'Lynx lynx'),
+                          species == 'Moose' ~ get_uuid(name = 'Alces alces'),
+                          species == 'Red fox' ~ get_uuid(name = 'Vulpes vulpes'),
+                          species == 'White-taield deer' ~ get_uuid(name ='Odocoileus virginianus'))) 
+  
+```
+
+## Plot coefficients
+
+Now let's explore some different options to plot the coefficients
+
+### All species
+
+Let's try plotting all the species on one plot using `ggplot()`
+```{r plot coeffs all}
+
+# provide data and mapping aesthetics
+ggplot(coeffs_df_all, aes(x = feature, 
+                          y = estimate, 
+                          group = uuid)) +
+  
+   geom_errorbar(aes(ymin = lower, 
+                     ymax = upper, 
+                     color = feature),
+                width = 0.4,
+                linewidth = 0.5,
+                position = position_dodge(width = 0.9)) +
+  
+    # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
+  geom_phylopic(aes(x = feature, 
+                 y = estimate,
+                 uuid = uuid),
+             position = position_dodge(width = 0.9),
+             size = 2)
+  
+  
+
+
+```
+
+
+# 
+```{r select silhouettes}
+
+# combine all list elements 
+coeffs_df_all <- list_rbind(top_models,
+                            names_to = 'species') %>% 
+  
+  # change species to a factor for plotting
   mutate(species = as.factor(species),
          
          # add phylopic uuid for each species for plotting 
