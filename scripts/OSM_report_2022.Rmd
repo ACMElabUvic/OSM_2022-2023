@@ -1178,12 +1178,7 @@ summary(deer_mods_no250$`3750 meter buffer`)
 
 # Coefficient plots
 
-```{r}
 
-plot_model(black_bear_mods_no250$`500 meter buffer`,
-           terms = c('pipeline'))
-
-```
 This is also a dog shit way to do this but I need to get this done
 ```{r}
 
@@ -1360,4 +1355,4 @@ ggplot(coeffs, aes(x = feature, y = estimate)) +
         legend.title = element_text(size = 12),
         plot.title = element_text(size = 15, hjust = 0.5))
 ```
-
+If all else fails can use [plot_model function](https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_model_estimates.html)
