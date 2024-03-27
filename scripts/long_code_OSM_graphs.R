@@ -350,3 +350,107 @@ ggsave('figures/naive_occ_LU21_2022.tiff',
 
 
 
+# for loop to subset buffer widths ----------------------------------------
+
+
+buffer_frames<-list()
+
+for (i in unique(covaraites_grouped$buff_dist)){
+  
+  print(i)
+  
+  #Subset data based on radius
+  df<-covaraites_grouped%>%
+    filter(buff_dist == i)
+  
+  #rename dataframe on the fly
+  assign(paste("df", i, sep ="_"), df)
+  
+  #list of dataframes
+  buffer_frames<-c(buffer_frames, list(df))
+  
+}
+
+
+# name list objects so we can extract names for plotting 
+
+buffer_frames <- buffer_frames %>% 
+  
+  # absurdly long way to do this but for sake of time fuck it
+  purrr::set_names('250 meter buffer',
+                   '500 meter buffer',
+                   '750 meter buffer',
+                   '1000 meter buffer',
+                   '1250 meter buffer',
+                   '1500 meter buffer',
+                   '1750 meter buffer',
+                   '2000 meter buffer',
+                   '2240 meter buffer',
+                   '2500 meter buffer',
+                   '2750 meter buffer',
+                   '3000 meter buffer',
+                   '3250 meter buffer',
+                   '3500 meter buffer',
+                   '3750 meter buffer',
+                   '4000 meter buffer',
+                   '4250 meter buffer',
+                   '4500 meter buffer',
+                   '4750 meter buffer',
+                   '5000 meter buffer')
+
+
+
+# correlation plots purrr -------------------------------------------------
+
+correlation_plots <- buffer_frames %>%
+  
+  # use purrr to do the same manipulation to all buffer data frames
+  purrr::imap(
+    ~.x %>%
+      
+      # select only numeric columns for correlation plot
+      select(where(is.numeric)) %>%
+      
+      # ectract correlation values
+      cor() %>%
+      
+      # pipe into corrplot function
+      corrplot::corrplot(type = 'upper',
+                         tl.col = 'black',
+                         title = paste0('Variable correlation plot at', .y)))
+
+
+
+
+# title = paste0('Variable correlation plot at', .y))
+
+
+# buffer_frames$`1000 meter buffer` %>%
+#   
+#   select(where(is.numeric)) %>% 
+#   
+#   cor() %>% 
+#   
+#   corrplot::corrplot(.,
+#                      type = 'upper',
+#                      tl.col = 'black')
+
+
+
+
+
+# ggsave cor plots purr (NOT WORKING) -------------------------------------
+
+
+# purrr::imap(
+#   correlation_plots,
+#   ~ggsave(.x,
+#           file = paste0("figures/",
+#                         .y,
+#                         '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+#           dpi = 600,
+#           width = 11,
+#           height = 9,
+#           units = 'in'))
+
+

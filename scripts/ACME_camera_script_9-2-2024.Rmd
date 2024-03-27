@@ -613,7 +613,14 @@ covariate_data <-
             
             # replace the '.' with '_'
             str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
-                            replacement = '_'))) %>%  # what you want the pattern to be replaced with
+                            replacement = '_')) %>%  # what you want the pattern to be replaced with
+  
+  # also split the site column (but keep original) into the LU and site
+    separate_wider_delim(site,
+                        delim = '_',
+                        names = c('array',
+                                  'camera'),
+                        cols_remove = FALSE)) %>% 
   
   # set the names of the two files in the list, if you don't run this they will be named numerically (e.g. [1], [2]) which can get confusing
   purrr::set_names('HFI',
@@ -684,7 +691,7 @@ covariates_all <- covariate_data$HFI %>%
   
   #use full join in case any issues with missing observations but we should be good since we checked the site names
   full_join(covariate_data$VEG,
-            by = c('site', 'buff_dist'))
+            by = c('array', 'camera', 'site', 'buff_dist'))
 
 
 head(covariates_all)

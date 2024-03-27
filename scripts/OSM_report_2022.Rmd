@@ -44,6 +44,9 @@ If you don't already have the following packages installed, use the code below t
 install.packages('tidyverse') 
 install.packages('ggpubr')
 install.packages('corrplot')
+install.packages('Hmisc')
+install.packages('glmmTMB')
+install.packages('MuMIn')
 ```
 
 ## Load libraries
@@ -55,6 +58,9 @@ Then load the packages to your library.
 library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
 library(ggpubr) # make modificaions to plot for publication (arrange plots)
 library(PerformanceAnalytics)    #Used to generate a correlation plot
+library(Hmisc) # used to generate histograms for all variables in data frame
+library(glmmTMB)      #Constructing GLMMs
+library(MuMIn) # for model selection
 
 ```
 
@@ -494,7 +500,9 @@ str(prop_detections)
 covariates <- read_csv('data/processed/OSM_2022_covariates.csv',
                        
                        # set the column types to read in correctly
-                       col_types = cols(site = col_factor(),
+                       col_types = cols(array = col_factor(),
+                                        camera = col_factor(),
+                                        site = col_factor(),
                                         buff_dist = col_factor(),
                                         .default = col_number()))
 
@@ -512,16 +520,10 @@ the [ABMI human footprints wall to wall data download website for Year 2021](htt
 
 ```{r format covariates}
 
-# reorder colnames alphabetically to view easier
-covariates_ordered <- covariates %>% 
-  
-  select(order(colnames(.)))
-
-
-covaraites_grouped <- covariates %>% 
+covariates_grouped <- covariates %>% 
   
   mutate(borrowpits = rowSums(across(contains('borrowpit'))),
-         inustrial_sites = camp_industrial + oil_gas_plant + open_pit_mine + 
+         industrial_sites = camp_industrial + oil_gas_plant + open_pit_mine + 
            rowSums(across(contains('facility'))),
          seismic_lines = rowSums(across(contains('seismic'))),
          wellsites = rowSums(across(contains('well'))),
@@ -560,36 +562,43 @@ covaraites_grouped <- covariates %>%
            .after = lc_class230)
 
 # see what's left
-names(covaraites_grouped)
+names(covariates_grouped)
 
 # check the structure of new data
-str(covaraites_grouped)
+str(covariates_grouped)
 
 # check summary of new data
-summary(covaraites_grouped)
+summary(covariates_grouped)
 
 # there are some NAs in the data which will cause problems with modeling/visualization of data ignore for now but will explore these sites specifically after report
 
-covaraites_grouped <- covaraites_grouped %>% 
+covariates_grouped <- covariates_grouped %>% 
   
+  # remove rows with NAs
   na.omit()
+
 ```
 
 
-Now we need to subset the data by buffer size so we have separate data frames for each buffer 
 
-```{r subset data by buffer}
+## Subset data & correlation plots
 
-# subset the data by buffer width, would like Andrew to make this into a forloop eventually
+>Marissa try to get the purrr code for this to work later
+
+Now we need to subset the data for each buffer width, and then in the same loop let's make correlation plots for these variables within each buffer
+
+```{r sub data cor plots}
+
+# Couldn't get this to work in purrr yet so using a loop to subset the data, create the plots, and save them all in one section... NEAT
 
 buffer_frames<-list()
 
-for (i in unique(covaraites_grouped$buff_dist)){
+for (i in unique(covariates_grouped$buff_dist)){
   
   print(i)
   
   #Subset data based on radius
-  df<-covaraites_grouped%>%
+  df<-covariates_grouped%>%
     filter(buff_dist == i)
   
   #rename dataframe on the fly
@@ -598,119 +607,8 @@ for (i in unique(covaraites_grouped$buff_dist)){
   #list of dataframes
   buffer_frames<-c(buffer_frames, list(df))
   
-}
-
-
-# name list objects so we can extract names for plotting 
-
-buffer_frames <- buffer_frames %>% 
-  
-  # absurdly long way to do this but for sake of time fuck it
-  purrr::set_names('250 meter buffer',
-                   '500 meter buffer',
-                   '750 meter buffer',
-                   '1000 meter buffer',
-                   '1250 meter buffer',
-                   '1500 meter buffer',
-                   '1750 meter buffer',
-                   '2000 meter buffer',
-                   '2240 meter buffer',
-                   '2500 meter buffer',
-                   '2750 meter buffer',
-                   '3000 meter buffer',
-                   '3250 meter buffer',
-                   '3500 meter buffer',
-                   '3750 meter buffer',
-                   '4000 meter buffer',
-                   '4250 meter buffer',
-                   '4500 meter buffer',
-                   '4750 meter buffer',
-                   '5000 meter buffer')
-  
-  
-
-```
-
-
-## Exploratory plots
-
-> add this section in later when we have more time to explore the covariates and choose which should be inlcuded etc.
-
-
-## Correlation plots
-
-Let's make correlation plots for these variables, we can use purrr to make them all with one section of code
-
-```{r correlation plots}
-
-correlation_plots <- buffer_frames %>%
-
-  # use purrr to do the same manipulation to all buffer data frames
-  purrr::imap(
-    ~.x %>%
-      
-      # select only numeric columns for correlation plot
-      select(where(is.numeric)) %>%
-      
-      # ectract correlation values
-      cor() %>%
-    
-      # pipe into corrplot function
-      corrplot::corrplot(type = 'upper',
-                         tl.col = 'black',
-                         title = paste0('Variable correlation plot at', .y)))
-  
-  
-  
-
-# title = paste0('Variable correlation plot at', .y))
-
-
-# buffer_frames$`1000 meter buffer` %>%
-#   
-#   select(where(is.numeric)) %>% 
-#   
-#   cor() %>% 
-#   
-#   corrplot::corrplot(.,
-#                      type = 'upper',
-#                      tl.col = 'black')
-           
-
- 
-
-```
-Now we can save all these correlation plots using ggsave?
-
-#ANDREW HELP
-
-I need to save all these plots but they are saved as a different kind of object in the list than the ggplots I made earlier were and so purrr::imap and ggsave don't like them. Do you have code to save all the correlation plots I generated above?
-
-```{r save cor plots}
-
-# purrr::imap(
-#   correlation_plots,
-#   ~ggsave(.x,
-#           file = paste0("figures/",
-#                         .y,
-#                         '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
-#           dpi = 600,
-#           width = 11,
-#           height = 9,
-#           units = 'in'))
-
-
-#Couldn't get it to work with the buffer_frames list, was giving me grief. So I took it back to the orriginal covaraites_grouped frame
-#subset the data to the current buff_dist
-#I couldn't figure out how to access the correlation plots from the list, so here I just save them on the fly with the png and dev.off pair
-#You could modify this to save to a list as well if you wanted though
-
-for (i in unique(covaraites_grouped$buff_dist)){
-  
-  print(i)
-  
   #Subset data based on radius
-  df<-covaraites_grouped%>%
+  df<-covariates_grouped%>%
     filter(buff_dist == i)%>%
     select(where(is.numeric))
   
@@ -729,5 +627,148 @@ for (i in unique(covaraites_grouped$buff_dist)){
 }
 
 
+# name list objects so we can extract names for plotting 
+
+buffer_frames <- buffer_frames %>% 
+  
+  # absurdly long way to do this but for sake of time fuck it
+  purrr::set_names('250 meter buffer',
+                   '500 meter buffer',
+                   '750 meter buffer',
+                   '1000 meter buffer',
+                   '1250 meter buffer',
+                   '1500 meter buffer',
+                   '1750 meter buffer',
+                   '2000 meter buffer',
+                   '2250 meter buffer',
+                   '2500 meter buffer',
+                   '2750 meter buffer',
+                   '3000 meter buffer',
+                   '3250 meter buffer',
+                   '3500 meter buffer',
+                   '3750 meter buffer',
+                   '4000 meter buffer',
+                   '4250 meter buffer',
+                   '4500 meter buffer',
+                   '4750 meter buffer',
+                   '5000 meter buffer')
+
 ```
 
+
+## Exploratory plots
+
+> add more to this section in later when we have more time to explore the covariates and choose which should be inlcuded etc.
+
+```{r hfi histograms}
+
+hfi_histograms <- buffer_frames %>% 
+  
+  purrr::imap(
+    ~.x %>% 
+      
+      # filter to just the HFI variables 
+      select(where(is.numeric) &
+          ! starts_with('lc_class')) %>% 
+      
+      # pipe into hist.data.frame function to make histograms for each variable
+      hist.data.frame(mtitl = paste0('Histograms of HFI variables at ', .y)))
+
+
+```
+
+Now let's do the same thing with the landcover variables
+
+```{r lc histograms}
+
+lc_histograms <- buffer_frames %>% 
+  
+  purrr::imap(
+    ~.x %>% 
+      
+      # filter to just the landcover variables 
+      select(where(is.numeric) &
+          starts_with('lc_class')) %>% 
+      
+      # pipe into hist.data.frame function to make histograms for each variable
+      hist.data.frame(mtitl = paste0('Histograms of landcover variables at ', .y)))
+```
+
+## Add response metric
+
+Now that we have the covariate data formatted we need to add the response metric (monthly proportional presence/absence) to the data frames
+
+```{r response metric}
+
+final_df <- buffer_frames %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      left_join(prop_detections,
+                by = 'site'))
+```
+
+
+# Black bear 
+
+## ANDREW/MARISSA FIX later
+
+> there is probably a way to shorten the following code to select particular species, I saw Andrew's for loop in the draft script he wrote but couldn't quite figure it out so I did this instead, maybe we can merge approaches?
+
+
+## Global model
+
+```{r black bear global model}
+
+
+
+black_bear_mods <- final_df %>%
+
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+
+```
+
+## Model selection
+
+```{r black bear mod selection}
+
+model.sel(black_bear_mods)
+
+```
+> hmmmm seems fishy to me that the 250 meter buffer which is the only one that had missing data would perform THAT much better than all the others, and really you shouldn't compare models if they aren't run on the same data, hence the warning message
+
+Let's remove the 250 buffer and see what happens
+
+```{r remove 250 buffer}
+
+black_bear_mods_no250 <- black_bear_mods  %>% 
+  
+  purrr::discard_at('250 meter buffer')
+
+# run model selection again
+model.sel(black_bear_mods_no250)
+```
+> this looks much more realistic
+
+Now repeat for other species
