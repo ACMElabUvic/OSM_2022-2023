@@ -1,0 +1,1358 @@
+---
+title: "OSM report 2022-2023"
+author: "Marissa Dyck"
+date: "2024-03-25"
+output: 
+  html_document:
+    theme: journal
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+# Before you begin
+
+## Notes
+
+A few notes about this script.
+
+If you are running this with the 2022-2023 data make sure you download the whole (OSM_2022-2023 GitHub repository)[https://github.com/ACMElabUvic/OSM_2022-2023] from the ACMElabUvic GitHub. This will ensure you have all the files, data, and proper folder structure you will need to run this code and associated analyses.
+
+Also make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data.
+
+Lastly, if you are looking to adapt this code for a future year of data, you will want to ensure you have run the ACME_camera_script_9-2-2024.R or .Rmd with your data as there is much data formatting, cleaning, and restructuring that has to be done before this code will work.
+
+If you have question please email the most recent author, currently   
+
+Marissa A. Dyck   
+Postdoctoral research fellow    
+University of Victoria    
+School of Environmental Studies     
+Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)      
+
+## Install packages
+
+If you don't already have the following packages installed, use the code below to install them.
+
+```{r install packages, eval=FALSE}
+
+install.packages('tidyverse') 
+install.packages('ggpubr')
+install.packages('corrplot')
+install.packages('Hmisc')
+install.packages('glmmTMB')
+install.packages('MuMIn')
+install.packages('TMB', type = 'source')
+install.packages('rphylopic')
+```
+
+## Load libraries
+
+Then load the packages to your library.
+
+```{r libraries}
+
+library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
+library(ggpubr) # make modificaions to plot for publication (arrange plots)
+library(PerformanceAnalytics)    #Used to generate a correlation plot
+library(Hmisc) # used to generate histograms for all variables in data frame
+library(glmmTMB)      #Constructing GLMMs
+library(MuMIn) # for model selection
+library(rphylopic) # add animal silhouettes to graphs
+
+```
+
+# Data
+
+## Load detection data
+
+Read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R.
+
+```{r data}
+
+# detection data
+# read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R 
+detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>% 
+  
+  # change site, species and event_id to factor
+  mutate_if(is.character,
+            as.factor)
+
+```
+
+## Data formatting
+
+In order to get plots that have the same formatting as last years' report we have to do a bit of data formatting. First we need to make sure we are including the same relevant species (some were ignored for last years' report or grouped together)
+
+Last years report had the following species
+
+* white-tailed deer
+* snowshoe hare
+* black bear
+* coyote
+* red squirrel
+* fisher
+* unknown
+* moose
+* lynx
+* spruce grouse
+* red fox
+* striped skunk
+* ruffed grouse
+* owl
+* grey wolf
+* domestic dog
+* cougar
+* raven
+* other 
+* mule deer
+
+And they grouped all humans except for staff as 'Humans'. Let's look at the species we have in this year's data and try to format it the same way
+
+```{r data format}
+
+detections %>% 
+  
+  # group by array and species
+  group_by(array, species) %>% 
+  summarise(n = n()) %>% 
+  
+  # have R print everything
+  print(n = nrow(.))
+
+# now let's create a new data frame (tibble) to work with for the OSM figure summaries specifically
+
+# I personally would lump all the unknown together and all the birds together but for the sake of consistency with last years' figures we will remove some entries, let's create a vector of entries to drop
+
+species_drop <- c('Staff',
+                  'Unknown deer',
+                  'Unknown ungulate',
+                  'Unknown canid',
+                  'Unknown mustelid',
+                  'Other birds')
+
+# now we can create the new data frame with some changes consistent w/ choices made for 2021-2022
+detections <- detections %>% 
+  
+  # for summarizing, lets lump all the recreational humans into "Humans"
+  mutate(species = recode_factor(species, 
+                                 "Snowmobiler" = "Human",
+                                 "ATVer" = "Human",
+                                 'Hunter' = 'Human')) %>% 
+  
+  # remove species we don't want to plot
+  filter(!species %in% species_drop)
+
+```
+
+We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
+
+```{r data subset}
+# we will also want to create a data frame for each LU to plot individually
+
+# LU1
+dets_LU1 <- detections %>% 
+  filter(array == 'LU01')
+
+# LU13
+dets_LU13 <- detections %>% 
+  filter(array == 'LU13')
+
+# LU15
+dets_LU15 <- detections %>% 
+  filter(array == 'LU15')
+
+# LU21
+dets_LU21 <- detections %>% 
+  filter(array == 'LU21')
+
+```
+
+## ANDREW HELP
+Can you make the above code into a forloop which assigns each new data frame created from subsetting as dets_LUname?
+
+
+# Detection plots
+
+## Detection data
+
+Now we can apply the same data formatting for each LUs' data frame using purrr.
+
+We want to count the number of independent detections per species per LU to use in the detection plots
+
+```{r det data}
+
+# apply the same formatting to each LU data frame using purrr map
+detection_data <- list(dets_LU1,
+                       dets_LU13,
+                       dets_LU15,
+                       dets_LU21) %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      # group by species
+      group_by(species) %>%
+      
+      # calculate a column with unique accounts of each species
+      mutate(count = n_distinct(event_id)) %>% 
+      
+      # keep just the columns we need
+      select(species, count) %>% 
+      
+      # keep only unique (distinct) rows so we should be left with one row per species, this helps with plotting later if you don't do it ggplot will try to count and plot each row it's annoying
+      distinct()) %>% 
+  
+  # set names of list objects
+  purrr::set_names('Detections LU01',
+                   'Detections LU13',
+                   'Detections LU15',
+                   'Detections LU21')
+
+```
+
+## Detection plots
+
+Now to graph independent detections for each LU using purrr, this avoids a TON of code repetition needed to plot each one individually
+
+We use `purrr::imap()` instead of `purrr::map()` because imap maintains the variable names in our list (e.g. Detections LU01, Detections LU13, etc.) which we can then use to title each plot.
+
+Within `purrr::imap()` we just paste the code we would use for a single ggplot since all the graphical elements (except the title which we change with the file name [.y]) are the same
+
+```{r det plots}
+# create object detection plots which uses the detection_data list (w/ all 4 LUs)
+detection_plots <- detection_data %>% 
+  
+  # use imap instead of map as it allows us to use .y to paste the list element names as the plot titles later
+  purrr::imap(
+    ~.x %>% 
+      
+      # now just copy and paste the ggplot code for the detection graphs
+      ggplot(.,
+             aes(x = reorder(species, count), y = count)) +
+      
+      # plot as bar graph using geom_col so we don't have to provide a y aesthetic
+      geom_col() +
+      
+      # switch the x and y axis
+      coord_flip() +
+      
+      # add the number of detections at the end of each bar
+      geom_text(aes(label = count),
+                color = "black",
+                size = 3,
+                hjust = -0.3,
+                vjust = 0.2) +
+      
+      # label x and y axis with informative titles
+      labs(x = 'Species',
+           y = 'Number of Independent (30 min) Detections') +
+      
+      # add title to plot with LU name the .y will take the name of whatever you named each list element in the detection_data list, so make sure this name is what you want on the ggtitle
+      ggtitle(.y) +
+      
+      # set the theme
+      theme_classic() +
+      theme(plot.title = element_text(hjust = 0.5)))
+
+# view plots, this will print each in it's own window so you have to scroll back in the plot viewer pane to look at each one
+detection_plots
+
+```
+
+## Save detection plots
+
+Now we want to save these plots in case we need each individual one (we will combine the detection and naive occ plots into a single figure for each LU later and use those for the OSM report, but we may want these standalone plots later so let's save them while they are here).
+
+We can save all the plots from the purrr iteration above using `purrr::imap`. imap is used instead of map because it allows us to retain the list object names (plot names) to paste as the file name with the .y command.
+
+> IMPORTANT if you are using this code for a future github repo, DO NOT use .tiff as the file extension. This will cause issues when trying to push any changes to the github repo as the files are too large to meet githubs requirements
+
+```{r save det plots}
+
+# save plots only use if needed
+purrr::imap(
+  detection_plots,
+  ~ggsave(.x,
+             file = paste0("figures/",
+                           .y,
+                           '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+          dpi = 600,
+          width = 11,
+          height = 9,
+          units = 'in'))
+
+```
+
+# Naive occupancy
+
+## Data
+
+We also need to alter the detection data a bit to use for naive occupancy plots. 
+
+We will use the individual LU detection data like we did before and use `purrr::map()` to apply the dame data formatting to all 4 data frames.
+
+Here we want to calculate the total number of sites in each LU, the number of sites each species was detected at in each LU and then use both those numbers to calculate naive occupancy for each species in each LU
+
+```{r occ data}
+
+# First we need to alter the data frame a bit for these plots, let's create a data frame for each LU (I couldn't figure out how to do this without assigning individual data frames for each UGH)
+
+
+# apply the same formatting to each data frame using purrr
+occupancy_data <- list(dets_LU1,
+                       dets_LU13,
+                       dets_LU15,
+                       dets_LU21) %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      # calculate the total number of sites for each LU
+      mutate(total_sites = n_distinct(site)) %>% 
+      
+      # group by species to calculate the number of sites each spp occurred at
+      group_by(species) %>% 
+  
+      # add columns to count the number of sites each spp occurred at and then the naive occupancy
+  reframe(count = n_distinct(site),
+          naive_occ = count/total_sites,
+          ind_det = n_distinct(event_id)) %>% 
+  
+    # keep just the columns we need
+  select(species, naive_occ, ind_det) %>% 
+  
+    # keep only unique (distinct) rows so we should be left with one row per species, this helps with plotting
+  distinct()) %>% 
+  
+  purrr::set_names('Naive Occupancy LU01',
+                   'Naive Occupancy LU13',
+                   'Naive Occupancy LU15',
+                   'Naive Occupancy LU21')
+```
+
+## Occupancy plots
+
+Now we can graph naive occupancy for each LU using purrr, and as with the detection plots this saves a massive amount of coding using purrr to run an iteration on the data files and produce four plots at once instead of copying and pasting code for each individually
+
+```{r occ plots}
+# create object occupancy_plots which uses the occupancy_data list (w/ all 4 LUs)
+occupancy_plots <- occupancy_data %>% 
+  
+  # use imap instead of map as it allows us to use .y to paste the list element names as the plot titles later
+  purrr::imap(
+    ~.x %>% 
+
+      # now just copy and paste the ggplot code for the occupancy graphs
+      ggplot(.,
+             aes(x = fct_reorder(species,
+                                 ind_det), # this reorders the species so they match the order of the detection plot which makes it better for viewing when the plots are arranged together in 1 figure for each LU
+                 y = naive_occ)) +
+      
+      # plot as bars using geom_col() which uses stat = 'identity', instead of geom_bar() which will count the rows in each group and plot that instead of naive occ
+      geom_col() +
+      
+      # flip x and y axis 
+      coord_flip() +
+      
+      # add text to end of bars that provides naive occ value
+      geom_text(aes(label = round(naive_occ, 2)), 
+                size = 3, 
+                hjust = -0.3, 
+                vjust = 0.2) +
+      
+      # relabel x and y axis and title
+      labs(x = 'Species',
+           y = 'Proportion of Sites With At Least One Detection') +
+      
+      # set plot title using .y (name of list object)
+      ggtitle(.y) +
+      
+      # set. theme elements
+      theme_classic()+
+      theme(plot.title = element_text(hjust = 0.5)))
+
+# view plots
+occupancy_plots
+```
+
+## Save occupancy plots
+
+As with the detection plots, we might want these individual plots later for something so we can use `purrr::imap()` to save them to the figures folder
+
+Again avoid using the .tiff extension in github
+
+```{r save occ plots}
+
+# save plots 
+purrr::imap(
+  occupancy_plots,
+  ~ggsave(.x,
+          file = paste0("figures/",
+                        .y,
+                        '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+          dpi = 600,
+          width = 11,
+          height = 9,
+          units = 'in'))
+
+```
+
+# Final combined plots for report
+
+The previous year's report had a figure for each LU with the detections plot on the top and the occupancy plot on the bottom so we will recreate these for this year using `ggarrange()`.
+
+Unfortunately I could not figure out how to do this in purrr to reduce coding but luckily it isn't too much repitition
+
+```{r combine plots}
+
+# not sure I know how to do the following section in purrr just yet, but we've saved a ton of coding so far and it doesn't take much to arrange each of these individually
+
+# LU1
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU1_det_occ_plots <- ggarrange(detection_plots$`Detections LU01`, occupancy_plots$`Naive Occupancy LU01`,
+                               labels = c("A", "B"),
+                               nrow = 2)
+
+# view plot
+LU1_det_occ_plots
+
+# LU13
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU13_det_occ_plots <- ggarrange(detection_plots$`Detections LU13`, occupancy_plots$`Naive Occupancy LU13`,
+                               labels = c("A", "B"),
+                               nrow = 2)
+
+# view plot
+LU13_det_occ_plots
+
+
+# LU15
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU15_det_occ_plots <- ggarrange(detection_plots$`Detections LU15`, occupancy_plots$`Naive Occupancy LU15`,
+                                labels = c("A", "B"),
+                                nrow = 2)
+
+# view plot
+LU15_det_occ_plots
+
+
+# LU21
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU21_det_occ_plots <- ggarrange(detection_plots$`Detections LU21`, occupancy_plots$`Naive Occupancy LU21`,
+                                labels = c("A", "B"),
+                                nrow = 2)
+
+# view plot
+LU21_det_occ_plots
+
+```
+
+We can however, save all the figures again using purrr
+
+```{r save combine plots}
+
+# save all figures at once using purrr
+final_det_occ_plots <- list(LU1_det_occ_plots,
+                            LU13_det_occ_plots,
+                            LU15_det_occ_plots,
+                            LU21_det_occ_plots) %>% 
+  
+
+  purrr::set_names('LU01_det_occ_plots',
+                   'LU13_det_occ_plots',
+                   'LU15_det_occ_plots',
+                   'LU21_det_occ_plots') %>% 
+  
+  purrr::imap(
+    ~ggsave(.x,
+            file = paste0("figures/",
+                          .y,
+                          '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
+            dpi = 600,
+            width = 12,
+            height = 15,
+            units = 'in'))
+
+```
+
+# Analysis prep
+
+## Read in data
+
+We need the proportional binomial data and the covariate data (from the ACME_camera_script_9-2-2024.R or .Rmd), let's read those in now and check the structure of each
+
+```{r read data}
+
+# response metric (proportional detections from the from the ACME_camera_script_9-2-2024.R or .Rmd)
+prop_detections <- read_csv('data/processed/OSM_2022_proportional_detections.csv')
+
+# check variable structure
+str(prop_detections)
+
+# model covariates (merged HFI and VEG data from the ACME_camera_script_9-2-2024.R or .Rmd)
+covariates <- read_csv('data/processed/OSM_2022_covariates.csv',
+                       
+                       # set the column types to read in correctly
+                       col_types = cols(array = col_factor(),
+                                        camera = col_factor(),
+                                        site = col_factor(),
+                                        buff_dist = col_factor(),
+                                        .default = col_number()))
+
+# check variable structure
+str(covariates)
+
+```
+
+## Format covariates
+
+There are too many covariates to include in the models individually and many of them describe similar HFI features. We can use the info from the README file in this repository which includes detailed descriptions from 
+the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html) **OR** in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf).
+
+> the current version of this code for the purposes of the 2022-2023 report used a merged dataset from 2021-2022 and 2022-2023 data, howver each year of data the variables were extracted slightly differenty from GIS so final version of this code will include a different formatting process which will likely occur in the ACME_camera_script_9-2-2024.R or .Rmd
+
+```{r format covariates}
+
+covariates_grouped <- covariates %>% 
+  
+  mutate(borrowpits = rowSums(across(contains('borrowpit'))),
+         industrial_sites = camp_industrial + oil_gas_plant + open_pit_mine + 
+           rowSums(across(contains('facility'))),
+         seismic_lines = rowSums(across(contains('seismic'))),
+         wellsites = rowSums(across(contains('well'))),
+         roads =  rowSums(across(contains('road'))),
+         havest_areas = rowSums(across(contains('harvest'))),
+         trails = rowSums(across(contains('trail'))),
+         residences = rowSums(across(contains('residence'))),
+         pasture = rowSums(across(contains('pasture'))),
+         other_transportation_features = runway + airp_runway + rlwy_sgl_track + vegetated_edge_railways,
+         crops = crop + fruit_vegetables + cultivation_abandoned,
+         water = lagoon + reservoir + dugout + canal,
+         .keep = 'unused') %>% 
+  
+  # remove features we don't need
+  select(!c(recreation,
+            clearing_unknown,
+            cfo,
+            grvl_sand_pit,
+            transfer_station,
+            campground,
+            surrounding_veg,
+            urban_industrial,
+            landfill,
+            sump,
+            water,
+            crops,
+            other_transportation_features,
+            pasture,
+            residences
+            )) %>% 
+  
+  # reorder variables
+  relocate(c(pipeline,
+             transmission_line,
+             borrowpits),
+           .after = lc_class230)
+
+# see what's left
+names(covariates_grouped)
+
+# check the structure of new data
+str(covariates_grouped)
+
+# check summary of new data
+summary(covariates_grouped)
+
+# there are some NAs in the data which will cause problems with modeling/visualization of data ignore for now but will explore these sites specifically after report
+
+covariates_grouped <- covariates_grouped %>% 
+  
+  # remove rows with NAs
+  na.omit()
+
+```
+
+
+
+## Subset data & correlation plots
+
+>Marissa try to get the purrr code for this to work later
+
+Now we need to subset the data for each buffer width, and then in the same loop let's make correlation plots for these variables within each buffer
+
+```{r sub data cor plots}
+
+# Couldn't get this to work in purrr yet so using a loop to subset the data, create the plots, and save them all in one section... NEAT
+
+buffer_frames<-list()
+
+for (i in unique(covariates_grouped$buff_dist)){
+  
+  print(i)
+  
+  #Subset data based on radius
+  df<-covariates_grouped%>%
+    filter(buff_dist == i)
+  
+  #rename dataframe on the fly
+  assign(paste("df", i, sep ="_"), df)
+  
+  #list of dataframes
+  buffer_frames<-c(buffer_frames, list(df))
+  
+  #Subset data based on radius
+  df<-covariates_grouped%>%
+    filter(buff_dist == i)%>%
+    select(where(is.numeric))
+  
+ #compute a correlation matrix (watch for errors)
+ matrix<-cor(df)
+ 
+ #print and save the correlation plot on the go
+ #renaming for each buffer as we do
+ png(file.path("figures/", paste("correlation_", i, ".png")))
+ corrplot::corrplot(matrix,
+                    type = 'upper',
+                    tl.col = 'black',
+                    title = paste0('Variable correlation plot at ', i))
+ dev.off()
+  
+}
+
+
+# name list objects so we can extract names for plotting 
+
+buffer_frames <- buffer_frames %>% 
+  
+  # absurdly long way to do this but for sake of time fuck it
+  purrr::set_names('250 meter buffer',
+                   '500 meter buffer',
+                   '750 meter buffer',
+                   '1000 meter buffer',
+                   '1250 meter buffer',
+                   '1500 meter buffer',
+                   '1750 meter buffer',
+                   '2000 meter buffer',
+                   '2250 meter buffer',
+                   '2500 meter buffer',
+                   '2750 meter buffer',
+                   '3000 meter buffer',
+                   '3250 meter buffer',
+                   '3500 meter buffer',
+                   '3750 meter buffer',
+                   '4000 meter buffer',
+                   '4250 meter buffer',
+                   '4500 meter buffer',
+                   '4750 meter buffer',
+                   '5000 meter buffer')
+
+```
+
+
+## Exploratory plots
+
+> add more to this section in later when we have more time to explore the covariates and choose which should be inlcuded etc.
+
+```{r hfi histograms}
+
+hfi_histograms <- buffer_frames %>% 
+  
+  purrr::imap(
+    ~.x %>% 
+      
+      # filter to just the HFI variables 
+      select(where(is.numeric) &
+          ! starts_with('lc_class')) %>% 
+      
+      # pipe into hist.data.frame function to make histograms for each variable
+      hist.data.frame(mtitl = paste0('Histograms of HFI variables at ', .y)))
+
+
+```
+
+Now let's do the same thing with the landcover variables
+
+```{r lc histograms}
+
+lc_histograms <- buffer_frames %>% 
+  
+  purrr::imap(
+    ~.x %>% 
+      
+      # filter to just the landcover variables 
+      select(where(is.numeric) &
+          starts_with('lc_class')) %>% 
+      
+      # pipe into hist.data.frame function to make histograms for each variable
+      hist.data.frame(mtitl = paste0('Histograms of landcover variables at ', .y)))
+```
+
+## Add response metric
+
+Now that we have the covariate data formatted we need to add the response metric (monthly proportional presence/absence) to the data frames
+
+```{r response metric}
+
+final_df <- buffer_frames %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      left_join(prop_detections,
+                by = 'site'))
+```
+
+# Analysis
+
+Now we are going to run a global model which includes all HFI and LC variables that at first glance (will do a more thorough check later) seem to have enough data to include as covariates for each buffer width, and then we will compare these models see which buffer width best fit the data  for each species.
+
+We don't need to do ALL the species since many don't have enough data.
+
+
+> Refer to the ACME_camera_script_9-2-2024.html or .Rmd the plot for proportional monthly detections should provide info on which species we have enough data for, can be found under Response metrics/3.Proportion monthly detections
+
+A brief look at this fig indicates that we have enough for all the mammals in the prop_detections data frame **except**
+
+* cougar    
+* wolverine  
+* caribou??? (may have enough may not)
+
+
+## Black bear 
+
+## ANDREW/MARISSA FIX later
+
+> there is probably a way to shorten the following code to select particular species, I saw Andrew's for loop in the draft script he wrote but couldn't quite figure it out so I did this instead, maybe we can merge approaches?
+
+
+### Global model
+
+Let's start with bears and use purrr to create a global model for every buffer distance
+
+```{r black bear global model}
+
+black_bear_mods <- final_df %>%
+
+  # use purrr map to fun the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+
+```
+
+
+### Model selection
+
+We will use the `model.sel()` function from the *MuMIn* package to compare the global models for each buffer width and see which buffer fits the bear data best
+```{r black bear mod selection}
+
+model.sel(black_bear_mods)
+
+```
+
+> hmmmm seems fishy to me that the 250 meter buffer which is the only one that had missing data would perform THAT much better than all the others, and really you shouldn't compare models if they aren't run on the same data, hence the warning message
+
+Let's remove the 250 buffer and see what happens
+
+```{r remove 250 buffer}
+
+black_bear_mods_no250 <- black_bear_mods  %>% 
+  
+  # purrr::discard_at will remove an item from a list
+  purrr::discard_at('250 meter buffer')
+
+
+# run model selection again
+model.sel(black_bear_mods_no250)
+```
+
+> this looks much more realistic; the 500 m buffer is top model for black bears
+
+So what we will do for each species is remove the 250 meter buffer for now since there are some data missing. and compare just the other buffer sizes that contain the full data set
+
+
+### Model summary
+
+Let's take a look at the model summary for the top model
+
+```{r black bear 500 summary}
+
+summary(black_bear_mods_no250$`500 meter buffer`)
+```
+
+
+Let's repeat this process for each species that we have enough data for.
+
+
+## Caribou
+
+We may or may not have enough data for caribou but let's try it at least for this preliminary report
+
+We can use the same code from black beasr (above) to run global models for each buffer width **except remember we want to remove 250 meters**
+
+And in the same chunk to save time let's also run the `model.sel()` function
+
+```{r caribou mods}
+
+caribou_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(caribou, absent_caribou) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(caribou_mods_no250)
+```
+
+We get a warning that there are some model convergence problems, I expect this is because we don't have enough data for caribou but I don't have time to dig into this now so we will investigate more closely for final analysis
+
+>For caribou 1250m buffer is top model *for now*
+
+Let's take a closer look at the top model summary
+```{r caribou 1250 summary}
+
+summary(caribou_mods_no250$`1250 meter buffer`)
+```
+There's nothing that catches my eye immediately as being sus about this particular model so it may not have been one with convergence issues. We will keep it in report for now
+
+
+## Coyote
+
+```{r coyote mods}
+
+coyote_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(coyote, absent_coyote) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(coyote_mods_no250)
+```
+
+> for coyote top model appears to be 4500 m by quite a bit
+
+Let's get the model summary for this model
+
+```{r coyote 4500 summary}
+
+summary(coyote_mods_no250$`4500 meter buffer`)
+```
+There is one lc class with a **very** high estimate and SE which seems a bit sus to me
+
+## Fisher
+
+```{r fisher mods}
+
+fisher_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(fisher, absent_fisher) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(fisher_mods_no250)
+```
+> For fisher top model is 2000 meter
+
+Let's print the summary for this model
+
+```{r fisher 2000 summary}
+
+summary(fisher_mods_no250$`2000 meter buffer`)
+```
+Again lc_class34 has a very high standard error, we may not have enough data in this landcover class to use in the final analysis
+
+## Grey wolf
+
+```{r wolf mods}
+
+wolf_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(grey_wolf, absent_grey_wolf) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(wolf_mods_no250)
+```
+> For grey wolf top model is 4500 m buffer
+
+Let's get the model summary for this model
+
+```{r wolf 4500 summary}
+
+summary(wolf_mods_no250$`4500 meter buffer`)
+```
+lc_class34 still presenting some issues, interesting that seismic lines weren't significant and have a negative estimate
+
+## Lynx
+
+```{r lynx mods}
+
+lynx_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(lynx, absent_lynx) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(lynx_mods_no250)
+```
+
+> For lynx the top model is the 1000 m buffer
+
+Let's get the model summary
+
+```{r lynx 1000 summary}
+
+summary(lynx_mods_no250$`1000 meter buffer`)
+```
+
+## Moose
+
+```{r moose mods}
+
+moose_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(moose, absent_moose) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(moose_mods_no250)
+```
+
+> For moose the top model is the 3750 m buffer
+
+Let's get the model summary
+
+```{r moose 3750 summary}
+
+summary(moose_mods_no250$`3750 meter buffer`)
+```
+
+## Red fox
+
+```{r fox mods}
+fox_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(red_fox, absent_red_fox) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(fox_mods_no250)
+
+```
+
+> For red fox the top model is 3750 m buffer
+
+Let's get the model summary
+
+```{r fox summary 3750}
+
+summary(fox_mods_no250$`3750 meter buffer`)
+```
+Gagh! Borrow pits does not have a reasonable estimate and SE
+
+## White-tailed deer
+
+```{r deer mods}
+
+deer_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+      # have to include the `` around the white-tailed_deer or R won't recognize it as a variable because of the -
+     glmmTMB::glmmTMB(cbind(`white-tailed_deer`, `absent_white-tailed_deer`) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(deer_mods_no250)
+```
+> For deer the top model was also the 3750 buffer
+
+Let's get the model summary
+
+```{r deer 3750 summary}
+
+summary(deer_mods_no250$`3750 meter buffer`)
+```
+
+# Coefficient plots
+
+
+This is also a dog shit way to do this but I need to get this done
+```{r}
+
+coeffs <- confint(black_bear_mods_no250$`500 meter buffer`) %>% 
+  
+  as_tibble() %>%
+  
+  # subset to just the HFI variables for these plots
+    slice_head(n = 6) %>% 
+  
+  # add a column where we can put the feature names
+  rowid_to_column() %>% 
+  
+  # rename the columns
+  rename('lower' = `2.5 %`,
+         'upper' = `97.5 %`,
+         'estimate' = Estimate,
+         'feature' = rowid) %>% 
+  
+  # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
+  mutate(feature = as.factor(feature),
+         feature = recode(feature,
+                          '1' = 'seismic_lines',
+                          '2' = 'pipeline',
+                          '3' = 'borrowpits',
+                          '4' = 'wellsites',
+                          '5' = 'roads',
+                          '6' = 'trails'))
+  
+# print
+ coeffs
+```
+Try ad do this for all top models at once with purrr
+```{r}
+
+top_models <- list(black_bear_mods_no250$`500 meter buffer`,
+                   caribou_mods_no250$`1250 meter buffer`,
+                   coyote_mods_no250$`4500 meter buffer`,
+                   fisher_mods_no250$`2000 meter buffer`,
+                   wolf_mods_no250$`4500 meter buffer`,
+                   lynx_mods_no250$`1000 meter buffer`,
+                   moose_mods_no250$`3750 meter buffer`,
+                   fox_mods_no250$`3750 meter buffer`,
+                   deer_mods_no250$`3750 meter buffer`) %>%  
+  
+  # use purrr to create coefficient table for all models
+  purrr::map(
+    ~.x %>% 
+      
+      confint() %>% 
+ 
+      as_tibble() %>%
+      
+      # subset to just the HFI variables for these plots
+      slice_head(n = 6) %>% 
+      
+      # add a column where we can put the feature names
+      rowid_to_column() %>% 
+      
+      # rename the columns
+      rename('lower' = `2.5 %`,
+             'upper' = `97.5 %`,
+             'estimate' = Estimate,
+             'feature' = rowid) %>% 
+      
+      # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
+      mutate(feature = as.factor(feature),
+             feature = recode(feature,
+                              '1' = 'seismic_lines',
+                              '2' = 'pipeline',
+                              '3' = 'borrowpits',
+                              '4' = 'wellsites',
+                              '5' = 'roads',
+                              '6' = 'trails'))) %>% 
+  
+  purrr::set_names('Black bear',
+                   'Caribou',
+                   'Coyote',
+                   'Fisher',
+                   'Grey wolf',
+                   'Lynx',
+                   'Moose',
+                   'Red fox',
+                   'White-tailed deer')
+```
+
+Merge data into one data frame
+
+```{r}
+coeffs_df_all <- list_rbind(top_models,
+                            names_to = 'species') %>% 
+  
+  mutate(species = as.factor(species),
+         
+         # add phylopic uuid for each species for plotting 
+         # the uuid is extracted using getuuid with the species name as name = ''
+         uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
+                          species == 'Caribou' ~ get_uuid(name = 'Rangifer tarandus'),
+                          species == 'Coyote' ~ get_uuid(name = 'Canis latrans'),
+                          species == 'Fisher' ~ get_uuid(name = 'Pekania pennanti'),
+                          species == 'Grey wolf' ~ get_uuid(name = 'Canis lupus'),
+                          species == 'Lynx' ~ get_uuid(name = 'Lynx lynx'),
+                          species == 'Moose' ~ '74eab34a-498c-4614-aece-f02361874f79',
+                          species == 'Red fox' ~ get_uuid(name = 'Vulpes vulpes'),
+                          species == 'White-taield deer' ~ '56f6fdb2-15d0-43b5-b13f-714f2cb0f5d0')) %>% 
+  
+  # need to remove problematic estimate which is going to skew plot since its so large compared to others
+  filter(!species == 'Red fox' &
+           !feature == 'wellsites')
+```
+
+After plotting the moose image I don't like it, let's manually replace it in the data
+
+```{r}
+# I went on the phylopic website and saw there are three images for moose, I like the last one better so we will use it
+
+get_uuid(name = 'Alces alces',
+         n = 3)
+
+get_uuid(name = 'Odocoileus virginianus',
+         n = 3)
+
+
+# Then I manually copied this uuid and replaces it in the code above
+```
+
+
+Try plotting all
+
+```{r}
+
+ggplot(coeffs_df_all, aes(x = feature, 
+                          y = estimate, 
+                          group = uuid)) +
+  
+   geom_errorbar(aes(ymin = lower, 
+                     ymax = upper, 
+                     color = feature),
+                width = 0.4,
+                linewidth = 1,
+                position = position_dodge(width = 1)) +
+  
+    # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
+  geom_phylopic(aes(x = feature, 
+                 y = estimate,
+                 uuid = uuid),
+             position = position_dodge(width = 1),
+             size = 4)
+  
+  
+
+
+```
+
+```{r}
+ggplot(coeffs, aes(x = feature, y = estimate)) +
+  
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  
+  geom_errorbar(aes(ymin = lower, ymax = upper),
+                width = 0.4,
+                linewidth = 1,
+                position = position_dodge(width = 0.5)) +
+  
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  scale_color_manual(values = c("#56B4E9", "#009E73"), name = "Spatial Scale")+
+  theme_classic()+
+  ggtitle("Moose Response to Anthropogenic Disturbance Features")+
+  ylab("Coefficient Estimate \n \u00B1 95% CI")+
+  scale_x_discrete(labels =c("Borrowpits", "Harvest\nAreas", "Industrial\nSites", "Pipelines","Roads", "Seismic\nLines", "Trails", "Transmission\nLines"))+
+    theme(axis.title.x = element_blank(),
+        axis.text.x =  element_text(size = 12),
+        axis.title.y = element_text(size = 14),
+        legend.title = element_text(size = 12),
+        plot.title = element_text(size = 15, hjust = 0.5))
+```
+If all else fails can use [plot_model function](https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_model_estimates.html)

@@ -326,14 +326,15 @@ det_graph <- detections %>%
 det_graph
 
 
-# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension) but don't use .tiff in the github repo it takes up too much space and causes issues
-ggsave('2022_indv_det_graph.jpeg',
-       det_graph,
-       path = 'figures',
-       width = 12,
-       height = 10,
-       units = 'in',
-       dpi = 600)
+# we can uncomment the code here (command + shift + c) to save graph as jpeg (can also save as tiff, png, pdf by changing the file extension) but don't use .tiff in the github repo it takes up too much space and causes issues
+
+# ggsave('2022_indv_det_graph.jpeg',
+#        det_graph,
+#        path = 'figures',
+#        width = 12,
+#        height = 10,
+#        units = 'in',
+#        dpi = 600)
 
 
 
@@ -646,7 +647,7 @@ ggplot(deploy_fixed, aes(color = array))+
   theme(axis.text = element_text(size = 6))
 
 
-# something weird is happening with a site in LU15, it has a later end date than the others by a lot. Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+# something weird is happening with a site in LU15, it has a later end date than the others by a lot (This may not show up once the correction has been made to the raw data file) Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file. 
 
 deploy_fixed %>% 
   
@@ -762,14 +763,15 @@ site_detections_plot
 
 # not the most readable plot because some species are skewing the x axis really high but it works for exploratory purposes
 
-# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
-ggsave('2022_detections_by_site.jpeg',
-       site_detections_plot,
-       path = 'figures',
-       width = 12,
-       height = 10,
-       units = 'in',
-       dpi = 600)
+# can uncomment (command + shift + c) to save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+
+# ggsave('2022_detections_by_site.jpeg',
+#        site_detections_plot,
+#        path = 'figures',
+#        width = 12,
+#        height = 10,
+#        units = 'in',
+#        dpi = 600)
 
 
 
@@ -829,14 +831,15 @@ ggplot(.,
 # view plot
 species_presence_plot
 
-# save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
-ggsave('2022_species_presence_graph.jpeg',
-       species_presence_plot,
-       path = 'figures',
-       width = 12,
-       height = 10,
-       units = 'in',
-       dpi = 600)
+# can uncomment (command + shift + c) to save graph as jpeg (can also save as tiff, png, pdf by changing the file extension)
+
+# ggsave('2022_species_presence_graph.jpeg',
+#        species_presence_plot,
+#        path = 'figures',
+#        width = 12,
+#        height = 10,
+#        units = 'in',
+#        dpi = 600)
  
 
 # 3. Proportion monthly detections ----------------------------------------

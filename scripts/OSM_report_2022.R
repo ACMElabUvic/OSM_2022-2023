@@ -280,7 +280,7 @@ occupancy_plots <- occupancy_data %>%
 # view plots
 occupancy_plots
 
-# save plots only use if needed
+# save plots 
 purrr::imap(
   occupancy_plots,
   ~ggsave(.x,
