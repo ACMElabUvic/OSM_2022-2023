@@ -9,12 +9,32 @@ output:
     toc_float: yes
 ---
 
+The first two chunks of this r markdown file after the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 ```
 
+```{css zoom-lib-src, echo = FALSE}
+script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+```
+
+```{js zoom-jquery, echo = FALSE}
+ $(document).ready(function() {
+    $('body').prepend('<div class=\"zoomDiv\"><img src=\"\" class=\"zoomImg\"></div>');
+    // onClick function for all plots (img's)
+    $('img:not(.zoomImg)').click(function() {
+      $('.zoomImg').attr('src', $(this).attr('src')).css({width: '100%'});
+      $('.zoomDiv').css({opacity: '1', width: 'auto', border: '1px solid white', borderRadius: '5px', position: 'fixed', top: '50%', left: '50%', marginRight: '-50%', transform: 'translate(-50%, -50%)', boxShadow: '0px 0px 50px #888888', zIndex: '50', overflow: 'auto', maxHeight: '100%'});
+    });
+    // onClick function for zoomImg
+    $('img.zoomImg').click(function() {
+      $('.zoomDiv').css({opacity: '0', width: '0%'}); 
+    });
+  });
+```
 # Before you begin
 
 ## Notes
@@ -1278,16 +1298,16 @@ coeffs_df_all <- list_rbind(top_models,
          uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
                           species == 'Caribou' ~ get_uuid(name = 'Rangifer tarandus'),
                           species == 'Coyote' ~ get_uuid(name = 'Canis latrans'),
-                          species == 'Fisher' ~ get_uuid(name = 'Pekania pennanti'),
+                          species == 'Fisher' ~ '735066c6-2f3e-4f97-acb1-06f55ae075c9',
                           species == 'Grey wolf' ~ get_uuid(name = 'Canis lupus'),
                           species == 'Lynx' ~ get_uuid(name = 'Lynx lynx'),
                           species == 'Moose' ~ '74eab34a-498c-4614-aece-f02361874f79',
-                          species == 'Red fox' ~ get_uuid(name = 'Vulpes vulpes'),
+                          species == 'Red fox' ~ '9c977769-bf1e-44d4-82ab-f9f93dce39ca',
                           species == 'White-taield deer' ~ '56f6fdb2-15d0-43b5-b13f-714f2cb0f5d0')) %>% 
   
   # need to remove problematic estimate which is going to skew plot since its so large compared to others
-  filter(!species == 'Red fox' &
-           !feature == 'wellsites')
+  filter(!c(species == 'Red fox' &
+           feature == 'wellsites'))
 ```
 
 After plotting the moose image I don't like it, let's manually replace it in the data
@@ -1300,6 +1320,12 @@ get_uuid(name = 'Alces alces',
 
 get_uuid(name = 'Odocoileus virginianus',
          n = 3)
+
+get_uuid(name = 'Pekania pennanti',
+         n = 2)
+
+get_uuid(name = 'Vulpes',
+         n = 2)
 
 
 # Then I manually copied this uuid and replaces it in the code above
@@ -1318,15 +1344,15 @@ ggplot(coeffs_df_all, aes(x = feature,
                      ymax = upper, 
                      color = feature),
                 width = 0.4,
-                linewidth = 1,
-                position = position_dodge(width = 1)) +
+                linewidth = 0.5,
+                position = position_dodge(width = 1.2)) +
   
     # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
   geom_phylopic(aes(x = feature, 
                  y = estimate,
                  uuid = uuid),
-             position = position_dodge(width = 1),
-             size = 4)
+             position = position_dodge(width = 1.2),
+             size = 2)
   
   
 

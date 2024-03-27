@@ -590,7 +590,7 @@ covariate_data <-
             
             # provide the file names
             c('OSM_LU01_LU13_LU15_LU21_HFI_2022.csv',
-              'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv')) %>%
+              'OSM_LU01_LU13_LU15_LU21_VEG_2022_new.csv')) %>%
   
   # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
   map(~.x %>%
@@ -892,7 +892,7 @@ ggplot(deploy_fixed, aes(color = array))+
 
 ```
 
-Ssomething weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. (This may not show up once the correction has been made to the raw data file). Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+Something weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. (This may not show up once the correction has been made to the raw data file). Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
 
 ```{r LU15 camera deploy check}
 
@@ -907,6 +907,7 @@ deploy_fixed %>%
                    y = site, 
                    yend = site))
 ```
+
 > the site we need to check in the raw data is LU15_12
 
 
