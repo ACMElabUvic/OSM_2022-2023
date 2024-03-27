@@ -1325,3 +1325,25 @@ write_csv(proportional_detections_bears,
 
 ```
 
+Let's also try to plot the presence data at least for each species so we can see which species we likely have enough data for to model
+
+```{r plot prop month dets}
+
+# first reformat the data so species presence is a column
+proportional_detections_bears %>% 
+  
+  pivot_longer(cols = c('black_bear':'caribou'),
+               names_to = 'species_presence',
+               values_to = 'months_present') %>% 
+  
+  select(site, species_presence, months_present) %>% 
+  
+ggplot(aes(x = site, y = months_present)) +
+  
+  # plot as bars
+  geom_col() +
+  
+  # use facet wrap to generate separate plots for each species
+  facet_wrap(vars(species_presence))
+```
+

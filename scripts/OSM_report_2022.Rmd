@@ -47,6 +47,8 @@ install.packages('corrplot')
 install.packages('Hmisc')
 install.packages('glmmTMB')
 install.packages('MuMIn')
+install.packages('TMB', type = 'source')
+install.packages('rphylopic')
 ```
 
 ## Load libraries
@@ -61,6 +63,7 @@ library(PerformanceAnalytics)    #Used to generate a correlation plot
 library(Hmisc) # used to generate histograms for all variables in data frame
 library(glmmTMB)      #Constructing GLMMs
 library(MuMIn) # for model selection
+library(rphylopic) # add animal silhouettes to graphs
 
 ```
 
@@ -482,7 +485,7 @@ final_det_occ_plots <- list(LU1_det_occ_plots,
 
 ```
 
-# Analysis
+# Analysis prep
 
 ## Read in data
 
@@ -709,25 +712,42 @@ final_df <- buffer_frames %>%
                 by = 'site'))
 ```
 
+# Analysis
 
-# Black bear 
+Now we are going to run a global model which includes all HFI and LC variables that at first glance (will do a more thorough check later) seem to have enough data to include as covariates for each buffer width, and then we will compare these models see which buffer width best fit the data  for each species.
+
+We don't need to do ALL the species since many don't have enough data.
+
+
+> Refer to the ACME_camera_script_9-2-2024.html or .Rmd the plot for proportional monthly detections should provide info on which species we have enough data for, can be found under Response metrics/3.Proportion monthly detections
+
+A brief look at this fig indicates that we have enough for all the mammals in the prop_detections data frame **except**
+
+* cougar    
+* wolverine  
+* caribou??? (may have enough may not)
+
+
+## Black bear 
 
 ## ANDREW/MARISSA FIX later
 
 > there is probably a way to shorten the following code to select particular species, I saw Andrew's for loop in the draft script he wrote but couldn't quite figure it out so I did this instead, maybe we can merge approaches?
 
 
-## Global model
+### Global model
+
+Let's start with bears and use purrr to create a global model for every buffer distance
 
 ```{r black bear global model}
 
-
-
 black_bear_mods <- final_df %>%
 
+  # use purrr map to fun the same functions for all buffer sizes ((all objects in list))
   purrr::map(
     ~.x %>%
 
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
      glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
                         seismic_lines +
                         pipeline +
@@ -749,13 +769,16 @@ black_bear_mods <- final_df %>%
 
 ```
 
-## Model selection
 
+### Model selection
+
+We will use the `model.sel()` function from the *MuMIn* package to compare the global models for each buffer width and see which buffer fits the bear data best
 ```{r black bear mod selection}
 
 model.sel(black_bear_mods)
 
 ```
+
 > hmmmm seems fishy to me that the 250 meter buffer which is the only one that had missing data would perform THAT much better than all the others, and really you shouldn't compare models if they aren't run on the same data, hence the warning message
 
 Let's remove the 250 buffer and see what happens
@@ -764,11 +787,577 @@ Let's remove the 250 buffer and see what happens
 
 black_bear_mods_no250 <- black_bear_mods  %>% 
   
+  # purrr::discard_at will remove an item from a list
   purrr::discard_at('250 meter buffer')
+
 
 # run model selection again
 model.sel(black_bear_mods_no250)
 ```
-> this looks much more realistic
 
-Now repeat for other species
+> this looks much more realistic; the 500 m buffer is top model for black bears
+
+So what we will do for each species is remove the 250 meter buffer for now since there are some data missing. and compare just the other buffer sizes that contain the full data set
+
+
+### Model summary
+
+Let's take a look at the model summary for the top model
+
+```{r black bear 500 summary}
+
+summary(black_bear_mods_no250$`500 meter buffer`)
+```
+
+
+Let's repeat this process for each species that we have enough data for.
+
+
+## Caribou
+
+We may or may not have enough data for caribou but let's try it at least for this preliminary report
+
+We can use the same code from black beasr (above) to run global models for each buffer width **except remember we want to remove 250 meters**
+
+And in the same chunk to save time let's also run the `model.sel()` function
+
+```{r caribou mods}
+
+caribou_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(caribou, absent_caribou) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(caribou_mods_no250)
+```
+
+We get a warning that there are some model convergence problems, I expect this is because we don't have enough data for caribou but I don't have time to dig into this now so we will investigate more closely for final analysis
+
+>For caribou 1250m buffer is top model *for now*
+
+Let's take a closer look at the top model summary
+```{r caribou 1250 summary}
+
+summary(caribou_mods_no250$`1250 meter buffer`)
+```
+There's nothing that catches my eye immediately as being sus about this particular model so it may not have been one with convergence issues. We will keep it in report for now
+
+
+## Coyote
+
+```{r coyote mods}
+
+coyote_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(coyote, absent_coyote) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(coyote_mods_no250)
+```
+
+> for coyote top model appears to be 4500 m by quite a bit
+
+Let's get the model summary for this model
+
+```{r coyote 4500 summary}
+
+summary(coyote_mods_no250$`4500 meter buffer`)
+```
+There is one lc class with a **very** high estimate and SE which seems a bit sus to me
+
+## Fisher
+
+```{r fisher mods}
+
+fisher_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(fisher, absent_fisher) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(fisher_mods_no250)
+```
+> For fisher top model is 2000 meter
+
+Let's print the summary for this model
+
+```{r fisher 2000 summary}
+
+summary(fisher_mods_no250$`2000 meter buffer`)
+```
+Again lc_class34 has a very high standard error, we may not have enough data in this landcover class to use in the final analysis
+
+## Grey wolf
+
+```{r wolf mods}
+
+wolf_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(grey_wolf, absent_grey_wolf) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(wolf_mods_no250)
+```
+> For grey wolf top model is 4500 m buffer
+
+Let's get the model summary for this model
+
+```{r wolf 4500 summary}
+
+summary(wolf_mods_no250$`4500 meter buffer`)
+```
+lc_class34 still presenting some issues, interesting that seismic lines weren't significant and have a negative estimate
+
+## Lynx
+
+```{r lynx mods}
+
+lynx_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(lynx, absent_lynx) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(lynx_mods_no250)
+```
+
+> For lynx the top model is the 1000 m buffer
+
+Let's get the model summary
+
+```{r lynx 1000 summary}
+
+summary(lynx_mods_no250$`1000 meter buffer`)
+```
+
+## Moose
+
+```{r moose mods}
+
+moose_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(moose, absent_moose) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(moose_mods_no250)
+```
+
+> For moose the top model is the 3750 m buffer
+
+Let's get the model summary
+
+```{r moose 3750 summary}
+
+summary(moose_mods_no250$`3750 meter buffer`)
+```
+
+## Red fox
+
+```{r fox mods}
+fox_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+     glmmTMB::glmmTMB(cbind(red_fox, absent_red_fox) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(fox_mods_no250)
+
+```
+
+> For red fox the top model is 3750 m buffer
+
+Let's get the model summary
+
+```{r fox summary 3750}
+
+summary(fox_mods_no250$`3750 meter buffer`)
+```
+Gagh! Borrow pits does not have a reasonable estimate and SE
+
+## White-tailed deer
+
+```{r deer mods}
+
+deer_mods_no250 <- final_df %>%
+  
+  # remove 350 meter buffer width
+  purrr::discard_at('250 meter buffer') %>% 
+  
+  # use purrr map to make global models for all other buffer sizes
+  purrr::map(
+    ~.x %>%
+
+      # have to include the `` around the white-tailed_deer or R won't recognize it as a variable because of the -
+     glmmTMB::glmmTMB(cbind(`white-tailed_deer`, `absent_white-tailed_deer`) ~
+                        seismic_lines +
+                        pipeline +
+                        borrowpits +
+                        wellsites +
+                        roads +
+                        trails + 
+                        lc_class20 +
+                        lc_class34 +
+                        lc_class50 +
+                        lc_class110 +
+                        lc_class210 +
+                        lc_class220 +
+                        lc_class230 +
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# model selection
+model.sel(deer_mods_no250)
+```
+> For deer the top model was also the 3750 buffer
+
+Let's get the model summary
+
+```{r deer 3750 summary}
+
+summary(deer_mods_no250$`3750 meter buffer`)
+```
+
+# Coefficient plots
+
+```{r}
+
+plot_model(black_bear_mods_no250$`500 meter buffer`,
+           terms = c('pipeline'))
+
+```
+This is also a dog shit way to do this but I need to get this done
+```{r}
+
+coeffs <- confint(black_bear_mods_no250$`500 meter buffer`) %>% 
+  
+  as_tibble() %>%
+  
+  # subset to just the HFI variables for these plots
+    slice_head(n = 6) %>% 
+  
+  # add a column where we can put the feature names
+  rowid_to_column() %>% 
+  
+  # rename the columns
+  rename('lower' = `2.5 %`,
+         'upper' = `97.5 %`,
+         'estimate' = Estimate,
+         'feature' = rowid) %>% 
+  
+  # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
+  mutate(feature = as.factor(feature),
+         feature = recode(feature,
+                          '1' = 'seismic_lines',
+                          '2' = 'pipeline',
+                          '3' = 'borrowpits',
+                          '4' = 'wellsites',
+                          '5' = 'roads',
+                          '6' = 'trails'))
+  
+# print
+ coeffs
+```
+Try ad do this for all top models at once with purrr
+```{r}
+
+top_models <- list(black_bear_mods_no250$`500 meter buffer`,
+                   caribou_mods_no250$`1250 meter buffer`,
+                   coyote_mods_no250$`4500 meter buffer`,
+                   fisher_mods_no250$`2000 meter buffer`,
+                   wolf_mods_no250$`4500 meter buffer`,
+                   lynx_mods_no250$`1000 meter buffer`,
+                   moose_mods_no250$`3750 meter buffer`,
+                   fox_mods_no250$`3750 meter buffer`,
+                   deer_mods_no250$`3750 meter buffer`) %>%  
+  
+  # use purrr to create coefficient table for all models
+  purrr::map(
+    ~.x %>% 
+      
+      confint() %>% 
+ 
+      as_tibble() %>%
+      
+      # subset to just the HFI variables for these plots
+      slice_head(n = 6) %>% 
+      
+      # add a column where we can put the feature names
+      rowid_to_column() %>% 
+      
+      # rename the columns
+      rename('lower' = `2.5 %`,
+             'upper' = `97.5 %`,
+             'estimate' = Estimate,
+             'feature' = rowid) %>% 
+      
+      # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
+      mutate(feature = as.factor(feature),
+             feature = recode(feature,
+                              '1' = 'seismic_lines',
+                              '2' = 'pipeline',
+                              '3' = 'borrowpits',
+                              '4' = 'wellsites',
+                              '5' = 'roads',
+                              '6' = 'trails'))) %>% 
+  
+  purrr::set_names('Black bear',
+                   'Caribou',
+                   'Coyote',
+                   'Fisher',
+                   'Grey wolf',
+                   'Lynx',
+                   'Moose',
+                   'Red fox',
+                   'White-tailed deer')
+```
+
+Merge data into one data frame
+
+```{r}
+coeffs_df_all <- list_rbind(top_models,
+                            names_to = 'species') %>% 
+  
+  mutate(species = as.factor(species),
+         
+         # add phylopic uuid for each species for plotting 
+         # the uuid is extracted using getuuid with the species name as name = ''
+         uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
+                          species == 'Caribou' ~ get_uuid(name = 'Rangifer tarandus'),
+                          species == 'Coyote' ~ get_uuid(name = 'Canis latrans'),
+                          species == 'Fisher' ~ get_uuid(name = 'Pekania pennanti'),
+                          species == 'Grey wolf' ~ get_uuid(name = 'Canis lupus'),
+                          species == 'Lynx' ~ get_uuid(name = 'Lynx lynx'),
+                          species == 'Moose' ~ '74eab34a-498c-4614-aece-f02361874f79',
+                          species == 'Red fox' ~ get_uuid(name = 'Vulpes vulpes'),
+                          species == 'White-taield deer' ~ '56f6fdb2-15d0-43b5-b13f-714f2cb0f5d0')) %>% 
+  
+  # need to remove problematic estimate which is going to skew plot since its so large compared to others
+  filter(!species == 'Red fox' &
+           !feature == 'wellsites')
+```
+
+After plotting the moose image I don't like it, let's manually replace it in the data
+
+```{r}
+# I went on the phylopic website and saw there are three images for moose, I like the last one better so we will use it
+
+get_uuid(name = 'Alces alces',
+         n = 3)
+
+get_uuid(name = 'Odocoileus virginianus',
+         n = 3)
+
+
+# Then I manually copied this uuid and replaces it in the code above
+```
+
+
+Try plotting all
+
+```{r}
+
+ggplot(coeffs_df_all, aes(x = feature, 
+                          y = estimate, 
+                          group = uuid)) +
+  
+   geom_errorbar(aes(ymin = lower, 
+                     ymax = upper, 
+                     color = feature),
+                width = 0.4,
+                linewidth = 1,
+                position = position_dodge(width = 1)) +
+  
+    # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
+  geom_phylopic(aes(x = feature, 
+                 y = estimate,
+                 uuid = uuid),
+             position = position_dodge(width = 1),
+             size = 4)
+  
+  
+
+
+```
+
+```{r}
+ggplot(coeffs, aes(x = feature, y = estimate)) +
+  
+  geom_point(size = 3, position = position_dodge(width = 0.5)) +
+  
+  geom_errorbar(aes(ymin = lower, ymax = upper),
+                width = 0.4,
+                linewidth = 1,
+                position = position_dodge(width = 0.5)) +
+  
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  scale_color_manual(values = c("#56B4E9", "#009E73"), name = "Spatial Scale")+
+  theme_classic()+
+  ggtitle("Moose Response to Anthropogenic Disturbance Features")+
+  ylab("Coefficient Estimate \n \u00B1 95% CI")+
+  scale_x_discrete(labels =c("Borrowpits", "Harvest\nAreas", "Industrial\nSites", "Pipelines","Roads", "Seismic\nLines", "Trails", "Transmission\nLines"))+
+    theme(axis.title.x = element_blank(),
+        axis.text.x =  element_text(size = 12),
+        axis.title.y = element_text(size = 14),
+        legend.title = element_text(size = 12),
+        plot.title = element_text(size = 15, hjust = 0.5))
+```
+
