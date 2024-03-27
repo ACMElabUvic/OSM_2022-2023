@@ -193,9 +193,26 @@ dets_LU21 <- detections %>%
 
 ```
 
-## ANDREW HELP
-Can you make the above code into a forloop which assigns each new data frame created from subsetting as dets_LUname?
+# Marissa's attempt at a for loop 
 
+Let's see how this shit goes... probably bad but who knows
+```{r Marissa's attempt at a for loop }
+
+array_frames <- list()
+
+for (i in unique(detections$array)){
+  
+  print(i)
+  
+ # list of dataframes
+  array_frames <- c(array_frames, list(df))
+  
+  #Subset data based on radius
+  df <- detections %>%
+    filter(array == i)
+}
+```
+... I think this worked
 
 # Detection plots
 
