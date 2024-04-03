@@ -21,7 +21,7 @@ library(tidyverse)
 ```
 
 
-These chunks allow for plot zooming once knitted and opened in browser, can delete if you don't want in your R markdown doc
+These chunks (only visible in RStudio) allow for plot zooming once knitted and opened in browser, can delete if you don't want in your R markdown doc
 
 ```{css zoom-lib-src, echo = FALSE}
 script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
@@ -62,6 +62,12 @@ University of Victoria
 School of Environmental Studies     
 Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)     
 
+## Netdrive access
+
+This script relys on the user having access to the ACME lab Netdrive (you can view the .html output of this file if you don't have access and just want to see what the script did).
+
+Helpful instructions for connecting to and navigating the Netdrive can also be found here: [https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit ](https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit).
+
 
 ## Install packages
 
@@ -90,8 +96,6 @@ library(withr) # used to temporarily set wd
 If you opened the OSM_2022-2023.Rproj file you should have your working directory set to the GitHub repository that you downloaded to your hard drive.
 
 We need to temporarily set your working drive to the ACME lab Netdrive to import the Timelapse data files (there are too many to efficiently store on GitHub or GoogleDrive each year). We will use the `with_dir()` function in the *withr* package to do this. 
-
-Helpful instructions for connecting to and navigating the Netdrive can also be found here: [https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit ](https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit).
 
 
 ## Import timelapse data 

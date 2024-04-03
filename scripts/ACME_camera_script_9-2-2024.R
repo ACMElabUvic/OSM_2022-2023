@@ -406,8 +406,8 @@ covariate_data <-
   file.path('data/raw',
             
             # provide the file names
-            c('OSM_LU01_LU13_LU15_LU21_HFI_2022.csv',
-              'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv')) %>%
+            c('OSM_LU01_LU13_LU15_LU21_HFI_2022_3-4-2024.csv',
+              'OSM_LU01_LU13_LU15_LU21_VEG_2022_3-4-2024.csv')) %>%
   
   # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
   map(~.x %>%
