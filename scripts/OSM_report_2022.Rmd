@@ -773,6 +773,8 @@ A brief look at this fig indicates that we have enough for all the mammals in th
 
 ### Global model
 
+### Marissa SCALE MODELS
+
 Let's start with bears and use purrr to create a global model for every buffer distance
 
 Recall `purrr::map()` is magical for iterations and will apply all the functions within the `map()` function to each item of the list supplied before the the `map()` function.
