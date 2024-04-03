@@ -9,13 +9,19 @@ output:
     toc_float: yes
 ---
  
-The first two chunks of this r markdown file after the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
+> IMPORTANT the first two chunks of this r markdown file **after** the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
+
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 ```
+
+
+These chunks allow for plot zooming once knitted and opened in browser, can delete if you don't want in your R markdown doc
 
 ```{css zoom-lib-src, echo = FALSE}
 script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
@@ -35,6 +41,8 @@ script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
     });
   });
 ```
+
+
 
 # Before you begin
 
@@ -589,8 +597,8 @@ covariate_data <-
   file.path('data/raw',
             
             # provide the file names
-            c('OSM_LU01_LU13_LU15_LU21_HFI_2022.csv',
-              'OSM_LU01_LU13_LU15_LU21_VEG_2022_new.csv')) %>%
+            c('OSM_LU01_LU13_LU15_LU21_HFI_2022_3-4-2024.csv',
+              'OSM_LU01_LU13_LU15_LU21_VEG_2022_3-4-2024.csv')) %>%
   
   # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
   map(~.x %>%
@@ -667,7 +675,7 @@ setdiff(levels(covariate_data$VEG$site),
 # no mismatches
 
 # we need to check that they also match the osm_2022_Det
-setdiff(levels(OSM_2022_det_ind$site),
+setdiff(levels(detections$site),
         levels(covariate_data$HFI$site))
 
 # [1] "LU12_51" "LU15_35"
@@ -675,7 +683,7 @@ setdiff(levels(OSM_2022_det_ind$site),
 
 # reverse the order to see which two are extras in the covariate data
 setdiff(levels(covariate_data$HFI$site),
-        levels(OSM_2022_det_ind$site))
+        levels(detections$site))
 
 # [1] "LU13_51" "LU13_35" it looks like the landscape units might have gotten typed in wrong. # checked with original data and these are the correct ones 
 
@@ -853,7 +861,7 @@ deploy_fixed <- deploy %>%
 
 # check to see that the above code worked for renaming sites
 setdiff(levels(deploy_fixed$site),
-        levels(OSM_2022_det_ind$site))
+        levels(detections$site))
 
 # now they match
 ```
@@ -951,7 +959,9 @@ For plotting and formatting proportional monthly detections we need to create a 
                     'Moose',
                     'Red fox',
                     'White-tailed deer',
-                    'Wolverine')
+                    'Wolverine',
+                    'Snowshoe hare' # this one was added for ES 482/582 class data, we don't normall use for OSM reports
+                    )
 ```
 
 ## 1. Total independent detections 
