@@ -1260,12 +1260,12 @@ proportional_detections <- as.data.frame(proportional_detections)
 
 # create a vector of the species columns for the loop
 # use all species columns (this value may change year to year)
-cols <- 2:12
+cols <- 2:13
 
 for (col in cols) {
-  if (is.numeric(proportional_detections[,col]) & is.numeric(proportional_detections[,13])) 
+  if (is.numeric(proportional_detections[,col]) & is.numeric(proportional_detections[,14])) 
     {new_col_name <- paste0("absent_", colnames(proportional_detections)[col])
-    proportional_detections[new_col_name] <- proportional_detections[,13] - proportional_detections[,col]
+    proportional_detections[new_col_name] <- proportional_detections[,14] - proportional_detections[,col]
   }
 }
 

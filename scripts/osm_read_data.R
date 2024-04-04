@@ -32,7 +32,7 @@ OSM_2022_LU01_files_3 <- list.files(
   full.names = TRUE) %>% 
 
   
-  # exclude files from backups sub-folders
+  # exclude files from backups sub-folders so we don't get duplicates
   stringr::str_subset(.,
                       'Backups',
                       negate = TRUE) %>% 
@@ -54,7 +54,7 @@ OSM_2022_LU01_files_3 <- list.files(
   
 
 
-# this takes a while to run bc R is looking in every sub-folder at every file to see if it matches the extension (i.e. .csv) and then saving the file name and path and then going back and removing the files from the 'backups' sub-folders. Maybe not the most elegant way to do this but beats having to copy and paste each file individually or writing a for loop.
+# this takes a while to run bc R is looking in every sub-folder at every file to see if it matches the extension (i.e. .csv) and then saving the file name and path and then going back and removing the files from the 'backups' sub-folders. Maybe not the most elegant way to do this but beats having to copy and paste each file individually.
 
 # use readr to read in the files from the previous step
 OSM_2022_LU01_data <- readr::read_csv(OSM_2022_LU01_files_2,
