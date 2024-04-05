@@ -37,18 +37,6 @@ This script relys on the user having access to the ACME lab Netdrive (you can vi
 
 Helpful instructions for connecting to and navigating the Netdrive can also be found here: [https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit ](https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit).
 
-## Set working directory
-
-Normal I don't have you set a working directory in a script because if you opened the .Rproj file you should have your working directory set to the directory you want. However, the raw timelapse files are not stored in the GitHub repository because they take up too much space, instead they are stored in the ACME lab Netdrive. 
-
-So we need to set our working drive to the Netdrive for this script. (If you don't have the netdriv eextension on your computer you will need the go through the steps outlined above to get setup with Netdrive access).
-
-```{r wd}
-
-# set working directory to the Netdrive
-setwd("/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023") # will need to change the year for each new year of data
-```
-
 
 ## Install packages
 
@@ -57,6 +45,7 @@ If you don't already have the following packages installed, use the code below t
 ```{r install packages, eval=FALSE}
 
 install.packages(tidyverse) 
+install.packages(withr) 
 ```
 
 
@@ -67,6 +56,7 @@ Then load the packages to your library.
 ```{r libraries}
 
 library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
+library(withr) # used to temporarily set wd
 ```
 
 
@@ -75,6 +65,8 @@ library(tidyverse) # data tidying, visualization, and much more; this will load 
 # Timelapse data
 
 ## Import data files
+
+First, we need to temporarily set your working drive to the ACME lab Netdrive to import the Timelapse data files (there are too many to efficiently store on GitHub or GoogleDrive each year). We will use the `with_dir()` function in the *withr* package to do this.
 
 The code below will read in all the files with a .csv extension from any subfolder/s within the main folder provided in the `path =` argument. I have also specified for it to ignore certain subfolders (e.g. backups). Then it will name each file based on the base name of the .csv file.
 
@@ -85,7 +77,7 @@ If the Netdrive folder structure changes in future years this code *may* not wor
 
 > this takes a while to run because R is looking in every sub-folder at every file to see if it matches the extension (i.e. .csv) and then saving the file name and path and then going back and removing the files from the 'backups' sub-folders. Maybe not the most elegant way to do this but beats having to manually copy and paste each file individually.
 
-```{r}
+```{r import, eval=FALSE}
 # temporarily set the working directory to import from the NetDrive
 with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
          
@@ -114,6 +106,23 @@ OSM_2022_timelapse_files <- list.files(
 ```
 IT WORKS!
 
-# Export data files
+## Export data files
 
-Now
+Now we need to save these files with their list name as the file name in the new folder. 
+
+Again we will need to temporarily set the working drive to the netdrive location we want to save the csv files in for this step 
+```{r export data, eval=FALSE}
+
+# set the working directory again to the netdrive
+with_dir(new = '/Volumes/acmelab/1.Resources/2.Arrays/Alberta/OSM/2022-2023',
+         
+         # use purrr::imap to save all files to new folder with file names from list
+         purrr::imap(
+           OSM_2022_timelapse_files,
+           ~write_csv(.x,
+                      file = paste0('2. Timelapse Files/',
+                                    .y,
+                                    '.csv'))))
+
+```
+
