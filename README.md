@@ -68,7 +68,7 @@ This folder includes data for the current year (2022-2023) that has been cleaned
 *Files in scripts folder*
 
 
-### DATA-SPECIFIC INFORMATION FOR: [data/raw/OSM_2022_Deployment_Data.csv]  
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/raw/OSM_2022_Deployment_Data.csv</span>]  
 
 * **Number of variables/columns:** 6
 * **Number of observations/rows:** 155 (one per camera site) 
@@ -88,7 +88,7 @@ This folder includes data for the current year (2022-2023) that has been cleaned
 * <span style = "color: #2274A5;">**Camera.Failure.Details**</span>, character describing any issues with the camera during deployment. 
 
 
-### DATA-SPECIFIC INFORMATION FOR: [data/raw/OSM_2022_Deployment_Site_Data.csv]
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/raw/OSM_2022_Deployment_Site_Data.csv</span>]
 
 * **Number of variables/columns:** 21
 * **Number of observations/rows:** 155 (one per camera site)  
@@ -138,7 +138,7 @@ This folder includes data for the current year (2022-2023) that has been cleaned
 * <span style = "color: #2274A5;">**Comments and Access Notes**</span>, a character with notes for the field crew.   
 
 
-### DATA-SPECIFIC INFORMATION FOR: [data/raw/OSM_LU01_LU13_LU15_LU21_HFI_2022.csv]  
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/raw/OSM_LU01_LU13_LU15_LU21_HFI_2022.csv</span>]  
 
 *Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*. 
 
@@ -284,7 +284,7 @@ Roughly square in shape clearing, roughly 90-120 meters wide (approximately 1 ha
 * <span style = "color: #2274A5;">**FEATURE_TYRLWY.SGL.TRACK**</span>, a numeric variable indicating the proportion of single track railways within the buffer area. Single track railways are defined as, hard, steel rail lines designed for train use. Specifically, a road or track for trains, consisting of parallel steel rails, supported on wooden crossbeams. The single track consists of one parallel sets of tracks.  
 
 
-### DATA-SPECIFIC INFORMATION FOR: [/data/raw/OSM_LU01_LU13_LU15_LU21_VEG_2022.csv] 
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">/data/raw/OSM_LU01_LU13_LU15_LU21_VEG_2022.csv</span>] 
 
 *Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI data archive wall to wall landcover inventory data download website for Year 2010](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Data-Archive/Land-Cover.html)* **OR** *in the relevant_literature folder of this repository (LandcoverMapABMIGuide2010v1.0.pdf.pdf)*. 
 
@@ -298,6 +298,8 @@ Roughly square in shape clearing, roughly 90-120 meters wide (approximately 1 ha
 * <span style = "color: #2274A5;">**BUFF_DIST**</span>, a numeric measurement in meters ranging from 250 - 5000, of the buffer radius around the camera for which the proportion of associated human factors variables were calculated.  
 
 * <span style = "color: #2274A5;">**LC_class20**</span>, a numeric variable indicating the proportion of landcover class 20 within the buffer area. Landcover class 20 is defined as water.   
+
+* <span style = "color: #2274A5;">**LC_class32**</span>, a numeric variable indicating the proportion of landcover class 32 within the buffer area. Landcover class 33 is defined as rock and rubble.  
 
 * <span style = "color: #2274A5;">**LC_class33**</span>, a numeric variable indicating the proportion of landcover class 33 within the buffer area. Landcover class 33 is defined as exposed land.  
 
@@ -316,7 +318,7 @@ Roughly square in shape clearing, roughly 90-120 meters wide (approximately 1 ha
 * <span style = "color: #2274A5;">**LC_class230**</span>, a numeric variable indicating the proportion of landcover class 230 within the buffer area. Landcover class 230 is defined as mixed forest.
 
 
-### DATA-SPECIFIC INFORMATION FOR: [data/processed/OSM_2022_covariates.csv]  
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/processed/OSM_2022_covariates.csv</span>]  
 
 *Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*. 
 

@@ -86,8 +86,8 @@ Then load the packages to your library.
 
 ```{r libraries}
 
-library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
-library(withr) # used to temporarily set wd
+library('tidyverse') # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
+library('withr') # used to temporarily set wd
 ```
 
 

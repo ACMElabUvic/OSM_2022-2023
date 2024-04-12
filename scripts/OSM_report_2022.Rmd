@@ -35,6 +35,7 @@ script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
     });
   });
 ```
+
 # Before you begin
 
 ## Notes
@@ -75,7 +76,7 @@ install.packages('rphylopic')
 
 Then load the packages to your library.
 
-```{r libraries}
+```{r libraries, message=FALSE}
 
 library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
 library(ggpubr) # make modificaions to plot for publication (arrange plots)
@@ -103,6 +104,7 @@ detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>%
   mutate_if(is.character,
             as.factor)
 
+str(detections)
 ```
 
 ## Data formatting
@@ -134,21 +136,23 @@ Last years report had the following species
 
 And they grouped all humans except for staff as 'Humans'. Let's look at the species we have in this year's data and try to format it the same way
 
-```{r data format}
+```{r det species}
 
 detections %>% 
   
   # group by array and species
-  group_by(array, species) %>% 
+  group_by(species) %>% 
   summarise(n = n()) %>% 
   
   # have R print everything
   print(n = nrow(.))
+```
 
-# now let's create a new data frame (tibble) to work with for the OSM figure summaries specifically
+Now let's create a new data frame (tibble) to work with for the OSM figure summaries specifically
 
-# I personally would lump all the unknown together and all the birds together but for the sake of consistency with last years' figures we will remove some entries, let's create a vector of entries to drop
+*I personally would lump all the unknown together and all the birds together but for the sake of consistency with last year's figures we will remove the same entries and keep the birds separate, let's create a vector of entries to drop*
 
+```{r det format}
 species_drop <- c('Staff',
                   'Unknown deer',
                   'Unknown ungulate',
@@ -168,11 +172,14 @@ detections <- detections %>%
   # remove species we don't want to plot
   filter(!species %in% species_drop)
 
+# look at data
+str(detections)
+
 ```
 
 We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
 
-```{r data subset}
+```{r det subset longhand, eval=FALSE}
 # we will also want to create a data frame for each LU to plot individually
 
 # LU1
@@ -193,26 +200,47 @@ dets_LU21 <- detections %>%
 
 ```
 
-# Marissa's attempt at a for loop 
+# Marissa's attempt at a for loop to subset data by array
+
+We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
 
 Let's see how this shit goes... probably bad but who knows
-```{r Marissa's attempt at a for loop }
+```{r det subset forloop }
 
 array_frames <- list()
 
 for (i in unique(detections$array)){
   
-  print(i)
+   #Subset data based on radius
+  df <- detections %>%
+    filter(array == i)
   
  # list of dataframes
   array_frames <- c(array_frames, list(df))
   
-  #Subset data based on radius
-  df <- detections %>%
-    filter(array == i)
+ 
 }
+
+# inspect one data frame
+print(array_frames[[1]]) # this is for LU01
 ```
 ... I think this worked
+
+
+Now let's change names of list items using purrr, couldn't figure out how to name them in the loop, you don't necessarily need to do this because we change the names in the next section, but I like having things named
+
+```{r name array frames}
+array_frames <- array_frames %>%
+
+  purrr::set_names('LU01',
+                   'LU13',
+                   'LU15',
+                   'LU21') # 
+
+# inspect each data frame
+print(array_frames$LU01)
+```
+
 
 # Detection plots
 
@@ -225,10 +253,7 @@ We want to count the number of independent detections per species per LU to use 
 ```{r det data}
 
 # apply the same formatting to each LU data frame using purrr map
-detection_data <- list(dets_LU1,
-                       dets_LU13,
-                       dets_LU15,
-                       dets_LU21) %>% 
+detection_data <- array_frames %>% 
   
   purrr::map(
     ~.x %>% 
@@ -310,7 +335,7 @@ We can save all the plots from the purrr iteration above using `purrr::imap`. im
 
 > IMPORTANT if you are using this code for a future github repo, DO NOT use .tiff as the file extension. This will cause issues when trying to push any changes to the github repo as the files are too large to meet githubs requirements
 
-```{r save det plots}
+```{r save det plots, eval=FALSE}
 
 # save plots only use if needed
 purrr::imap(
@@ -342,10 +367,7 @@ Here we want to calculate the total number of sites in each LU, the number of si
 
 
 # apply the same formatting to each data frame using purrr
-occupancy_data <- list(dets_LU1,
-                       dets_LU13,
-                       dets_LU15,
-                       dets_LU21) %>% 
+occupancy_data <- array_frames %>% 
   
   purrr::map(
     ~.x %>% 
@@ -424,7 +446,7 @@ As with the detection plots, we might want these individual plots later for some
 
 Again avoid using the .tiff extension in github
 
-```{r save occ plots}
+```{r save occ plots, eval=FALSE}
 
 # save plots 
 purrr::imap(
@@ -496,7 +518,7 @@ LU21_det_occ_plots
 
 We can however, save all the figures again using purrr
 
-```{r save combine plots}
+```{r save combine plots, eval=FALSE}
 
 # save all figures at once using purrr
 final_det_occ_plots <- list(LU1_det_occ_plots,
@@ -556,50 +578,163 @@ str(covariates)
 There are too many covariates to include in the models individually and many of them describe similar HFI features. We can use the info from the README file in this repository which includes detailed descriptions from 
 the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html) **OR** in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf).
 
-> the current version of this code for the purposes of the 2022-2023 report used a merged dataset from 2021-2022 and 2022-2023 data, howver each year of data the variables were extracted slightly differenty from GIS so final version of this code will include a different formatting process which will likely occur in the ACME_camera_script_9-2-2024.R or .Rmd
+> the current version of this code for the purposes of the 2022-2023 report used a merged dataset from 2021-2022 and 2022-2023 data, howver each year of data the variables were extracted slightly differenty from GIS so final version of this code will include a different formatting process which will likely occur in the ACME_camera_script_9-2-2024.R or .Rmd'
 
-```{r format covariates}
+First lets order the columns alphabetically so we can look at descriptions for everything in the ABMI doc easier. We will want the non-covariate columns (i.e., array, site, camera, buffer_dsit) at the front so we can use relocate after we order all of the columns to move these four to the front of the data.
+
+```{r order covs}
+
+covariates <- covariates %>% 
+  
+  # order columns alphabetically
+  select(order(colnames(.))) %>% 
+  
+  # we want to move the columns that aren't HFI features or landcover to the front
+  relocate(.,
+           c(array,
+             site,
+             camera,
+             buff_dist))  
+
+# get a list of column names to ensure it worked
+names(covariates)
+```
+
+Let's get a summary of each variable now, and lets filter by just the 1000m buffer width so we don't have a bunch of repeated data for each buffer width at each site, this will give us general insights into how much variability we have with each feature at a general buffer width. *You can change this if you are interested in a different bufffer width specifically, or if it makes more since to see the data for the min (250m) or max (5000m) buffer width.
+
+```{r covs summary}
+
+covariates %>% 
+  # filter to just buffer 1000 m
+  filter(buff_dist == 1000) %>% 
+  
+  summary(.)
+```
+
+
+Let's also plot histograms of each variable for data visualization in a for loop, I wanted to do this for just one buffer size to reduce replicates but it will also drop any variables for which all the data are zeros, so you could explore this at different buffer widths or just remove the filter function and look at all the data which is what I do below once it is grouped
+
+```{r covs histograms}
+
+# filter to just one buffer width
+
+covariates_1000 <- covariates %>%  
+  
+  filter(buff_dist == 1000)
+
+for (col in 1:ncol(covariates_1000)) {
+    hist(covariates_1000[,col])
+}
+```
+
+Now we can use the information from the previous few steps as well as the variable descriptions from the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html) which is stored in the 'relevant literature' portion of this document **AND** also copied into the README file, to group the covariates so we reduce the number of potential variables to explore in the modeling phase. 
+
+We will use the `mutate()` function with some tidyverse trickery (i.e., nesting `across()` and `contains()` in `rowsums()`) to sum across each observation (row) by searching for various character strings. If there isn't a common character string for multiple variables we want to sum then we provide each one individually. We can also combine these methods (e.g., with 'facilities' [see code]).
+
+```{r format covs}
 
 covariates_grouped <- covariates %>% 
   
-  mutate(borrowpits = rowSums(across(contains('borrowpit'))),
-         industrial_sites = camp_industrial + oil_gas_plant + open_pit_mine + 
-           rowSums(across(contains('facility'))),
-         seismic_lines = rowSums(across(contains('seismic'))),
-         wellsites = rowSums(across(contains('well'))),
-         roads =  rowSums(across(contains('road'))),
-         havest_areas = rowSums(across(contains('harvest'))),
-         trails = rowSums(across(contains('trail'))),
-         residences = rowSums(across(contains('residence'))),
-         pasture = rowSums(across(contains('pasture'))),
-         other_transportation_features = runway + airp_runway + rlwy_sgl_track + vegetated_edge_railways,
-         crops = crop + fruit_vegetables + cultivation_abandoned,
-         water = lagoon + reservoir + dugout + canal,
+  # rename 'vegetated_edge_roads so that we can use road as keyword to group roads without including this feature
+  rename('vegetated_edge_rds' = vegetated_edge_roads) %>% 
+  
+  # within the mutate function create new column names for the grouped variables
+  mutate(
+    # borrowpits
+    borrowpits = rowSums(across(contains('borrowpit'))) + # here we use rowsums with across() and contains() to sum acrross each row any values for columns that contain the keyword above. Be careful when using that there aren't any variables that match the string (keyword) provided that you don't want to include!
+      
+      dugout +
+      lagoon +
+      sump,
+    
+    
+    # clearings
+    clearings = rowSums(across(contains('clearing'))) +
+      runway,
+    
+    # cultivations
+    cultivation = crop + 
+      cultivation_abandoned +
+      fruit_vegetables +
+      rough_pasture +
+      tame_pasture,
+    
+    # harvest areas
+    harvest = rowSums(across(contains('harvest'))),
+    
+    # industrial facilities
+    facilities = rowSums(across(contains('facility'))) +
+      rowSums(across(contains('plant'))) +
+      camp_industrial +
+      mill +
+      ris_camp_industrial +
+      ris_tank_farm +
+      ris_utilities +
+      urban_industrial,
+    
+    # mine areas
+    mines = rowSums(across(contains('mine'))) +
+      rowSums(across(contains('tailing'))) +
+      grvl_sand_pit +
+      peat +
+      ris_drainage +
+      ris_oilsands_rms +
+      ris_overburden_dump +
+      ris_reclaim_ready +
+      ris_soil_salvaged +
+      ris_waste,
+    
+    # railways
+    railways = rowSums(across(contains('rlwy'))),
+    
+    # reclaimed areas
+    reclaimed = rowSums(across(contains('reclaimed'))) +
+      ris_soil_replaced +
+      ris_windrow,
+    
+    # recreation areas
+    recreation = campground +
+      golfcourse +
+      greenspace +
+      recreation,
+    
+    # residential areas (can't use residence as keyword because 'residence_clearing' is in clearing unless we rearrange groupings or rename that one)
+    residential = country_residence +
+      rural_residence +
+      urban_residence,
+    
+    # roads (we renamed 'vegetated_edge_roads' above to 'vegetated_edge_rds' so we can use roads as keyword here which saves a bunch of coding as there are many many road variables)
+    roads = rowSums(across(contains('road'))) +
+      interchange_ramp +
+      airp_runway +
+      ris_airp_runway,
+    
+    # seismic lines
+    seismic_lines = rowSums(across(contains('seismic'))),
+    
+    # transmission lines
+    transmission_lines = rowSums(across(contains('transmission'))),
+    
+    # trails
+    trails = rowSums(across(contains('trail'))),
+    
+    # vegetated edges
+    veg_edges = rowSums(across(contains('vegetated'))) +
+      surrounding_veg,
+    
+    # man-made water features
+    water = canal +
+      reservoir,
+    
+    # well sites (this probably includes 'clearing_wellpad' need to check)
+    wells = rowSums(across(contains('well'))),
+    
+    # remove columns that were used to create new columns to tidy the data frame
          .keep = 'unused') %>% 
   
-  # remove features we don't need
-  select(!c(recreation,
-            clearing_unknown,
-            cfo,
-            grvl_sand_pit,
-            transfer_station,
-            campground,
-            surrounding_veg,
-            urban_industrial,
-            landfill,
-            sump,
-            water,
-            crops,
-            other_transportation_features,
-            pasture,
-            residences
-            )) %>% 
-  
-  # reorder variables
-  relocate(c(pipeline,
-             transmission_line,
-             borrowpits),
-           .after = lc_class230)
+  # reorder variables so the veg data is after all the HFI data
+  relocate(starts_with('lc_class'),
+           .after = wells)
 
 # see what's left
 names(covariates_grouped)
@@ -620,10 +755,61 @@ covariates_grouped <- covariates_grouped %>%
 ```
 
 
+Let's look at the histograms again and see if we need to remove any features or feature groups without enough data
+
+```{r covs grouped histograms}
+
+# use for loop to plot histograms for all covariates
+
+for (col in 5:ncol(covariates_grouped)) {
+    hist(covariates_grouped[,col])
+}
+```
+> IMO we don't have enough variation in data to use the following features/feature groups
+
+* cfo     
+* Cultivation   
+* Reclaimed   
+* Recreation    
+* Reservoir   
+* Residential 
+* Water
+* lc_class120 (aka agriculture)
+* lc_class32 (aka rocks and rubble)   
+
+We also don't have any data for following features since they don't plot with the `hist()` function
+
+* Interchange ramp 
+* Landfill  
+* railways
+
+So let's modify this data and remove those features for now **this step will need to be changed each year likely**
+
+```{r covs remove features}
+
+covariates_grouped <- covariates_grouped %>% 
+  
+  # remove features we don't need
+  select(!c(cfo,
+            cultivation,
+            reclaimed,
+            recreation,
+            residential,
+            water,
+            lc_class120,
+            lc_class32,
+            landfill,
+            transfer_station,
+            railways))
+
+# check that it worked
+names(covariates_grouped)
+```
+
 
 ## Subset data & correlation plots
 
->Marissa try to get the purrr code for this to work later
+> Marissa try to get the purrr code for this to work later
 
 Now we need to subset the data for each buffer width, and then in the same loop let's make correlation plots for these variables within each buffer
 
@@ -631,32 +817,32 @@ Now we need to subset the data for each buffer width, and then in the same loop 
 
 # Couldn't get this to work in purrr yet so using a loop to subset the data, create the plots, and save them all in one section... NEAT
 
-buffer_frames<-list()
+buffer_frames <- list()
 
 for (i in unique(covariates_grouped$buff_dist)){
   
   print(i)
   
   #Subset data based on radius
-  df<-covariates_grouped%>%
+  df<-covariates_grouped %>%
     filter(buff_dist == i)
   
   #rename dataframe on the fly
   assign(paste("df", i, sep ="_"), df)
   
   #list of dataframes
-  buffer_frames<-c(buffer_frames, list(df))
+  buffer_frames <-c (buffer_frames, list(df))
   
   #Subset data based on radius
-  df<-covariates_grouped%>%
-    filter(buff_dist == i)%>%
+  df<-covariates_grouped %>%
+    filter(buff_dist == i) %>%
     select(where(is.numeric))
   
  #compute a correlation matrix (watch for errors)
- matrix<-cor(df)
+ matrix <- cor(df)
  
- #print and save the correlation plot on the go
- #renaming for each buffer as we do
+ # print and save the correlation plot on the go
+ # renaming for each buffer as we do
  png(file.path("figures/", paste("correlation_", i, ".png")))
  corrplot::corrplot(matrix,
                     type = 'upper',
@@ -694,6 +880,7 @@ buffer_frames <- buffer_frames %>%
                    '5000 meter buffer')
 
 ```
+You will get a warning about standard deviation is zero for buffer 250
 
 
 ## Exploratory plots
@@ -702,6 +889,10 @@ buffer_frames <- buffer_frames %>%
 
 ```{r hfi histograms}
 
+# use this code to change figure margins otherwise will not plot because figure margines are too large
+par(mar=c(1,1,1,1))
+
+# now use purrr to plot histograms for all remaining HFI variables for each buffer
 hfi_histograms <- buffer_frames %>% 
   
   purrr::imap(
@@ -734,13 +925,14 @@ lc_histograms <- buffer_frames %>%
       hist.data.frame(mtitl = paste0('Histograms of landcover variables at ', .y)))
 ```
 
+
 ## Add response metric
 
 Now that we have the covariate data formatted we need to add the response metric (monthly proportional presence/absence) to the data frames
 
 ```{r response metric}
 
-final_df <- buffer_frames %>% 
+final_osm_2023_df <- buffer_frames %>% 
   
   purrr::map(
     ~.x %>% 
@@ -748,6 +940,7 @@ final_df <- buffer_frames %>%
       left_join(prop_detections,
                 by = 'site'))
 ```
+
 
 # Analysis
 
@@ -774,6 +967,7 @@ A brief look at this fig indicates that we have enough for all the mammals in th
 ### Global model
 
 ### Marissa SCALE MODELS
+> actually don't need to since all variables are proportions already right?
 
 Let's start with bears and use purrr to create a global model for every buffer distance
 
@@ -781,7 +975,7 @@ Recall `purrr::map()` is magical for iterations and will apply all the functions
 ```{r black bear global model}
 
 # create models for black bears at each buffer size
-black_bear_mods <- final_df %>%
+black_bear_mods <- final_osm_2023_df %>%
 
   # use purrr map to fun the same functions for all buffer sizes ((all objects in list))
   purrr::map(
@@ -789,26 +983,39 @@ black_bear_mods <- final_df %>%
 
       # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
      glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
-                        seismic_lines +
-                        pipeline +
-                        borrowpits +
-                        wellsites +
-                        roads +
-                        trails + 
-                        lc_class20 +
-                        lc_class34 +
-                        lc_class50 +
-                        lc_class110 +
-                        lc_class210 +
-                        lc_class220 +
-                        lc_class230 +
+                        
+                        # HFI covariates in alphabetical order
+                        scale(borrowpits) +
+                        scale(pipeline) +
+                        scale(clearings) +
+                        scale(harvest) +
+                        scale(facilities) +
+                        scale(mines) +
+                        scale(roads) +
+                        scale(seismic_lines) +
+                        scale(transmission_lines) +
+                        scale(trails) +
+                         scale(veg_edges) +
+                        scale(wells) +
+                        
+                        # VEG covariates in numerical order
+                        scale(lc_class110) +
+                        scale(lc_class20) +
+                        scale(lc_class210) +
+                        scale(lc_class220) +
+                        scale(lc_class230) +
+                        scale(lc_class33) +
+                        scale(lc_class34) +
+                        scale(lc_class50) +
+                        
+                        # Random effect of array
                         (1|array),
                    data = .,
                    family = 'binomial'))
 
 
 ```
-
+> Lots of notes about model convergence problems. Likely because there are too many variables in model and some without enough variation in data to reliably calculate and estime. We should revisit the data and thin it out a bit more
 
 ### Model selection
 
@@ -865,7 +1072,7 @@ And in the same chunk to save time let's also run the `model.sel()` function
 ### Models/Model selection
 ```{r caribou mods}
 
-caribou_mods_no250 <- final_df %>%
+caribou_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -875,19 +1082,29 @@ caribou_mods_no250 <- final_df %>%
     ~.x %>%
 
      glmmTMB::glmmTMB(cbind(caribou, absent_caribou) ~
-                        seismic_lines +
-                        pipeline +
-                        borrowpits +
-                        wellsites +
-                        roads +
-                        trails + 
-                        lc_class20 +
-                        lc_class34 +
-                        lc_class50 +
-                        lc_class110 +
-                        lc_class210 +
-                        lc_class220 +
-                        lc_class230 +
+                        # HFI covariates in alphabetical order
+                        scale(borrowpits) +
+                        scale(pipeline) +
+                        scale(clearings) +
+                        scale(harvest) +
+                        scale(facilities) +
+                        scale(mines) +
+                        scale(roads) +
+                        scale(seismic_lines) +
+                        scale(transmission_lines) +
+                        scale(trails) +
+                         scale(veg_edges) +
+                        scale(wells) +
+                        
+                        # VEG covariates in numerical order
+                        scale(lc_class110) +
+                        scale(lc_class20) +
+                        scale(lc_class210) +
+                        scale(lc_class220) +
+                        scale(lc_class230) +
+                        scale(lc_class33) +
+                        scale(lc_class34) +
+                        scale(lc_class50) +
                         (1|array),
                    data = .,
                    family = 'binomial'))
@@ -898,14 +1115,14 @@ model.sel(caribou_mods_no250)
 
 We get a warning that there are some model convergence problems, I expect this is because we don't have enough data for caribou but I don't have time to dig into this now so we will investigate more closely for final analysis
 
->For caribou 1250m buffer is top model *for now*
+>For caribou 3500m buffer is top model *for now*
 
-### Model summary 1250m
+### Model summary 3500m
 
 Let's take a closer look at the top model summary
-```{r caribou 1250 summary}
+```{r caribou 3500 summary}
 
-summary(caribou_mods_no250$`1250 meter buffer`)
+summary(caribou_mods_no250$`3500 meter buffer`)
 ```
 There's nothing that catches my eye immediately as being sus about this particular model so it may not have been one with convergence issues. We will keep it in report for now
 
@@ -913,9 +1130,9 @@ There's nothing that catches my eye immediately as being sus about this particul
 ## Coyote
 
 ### Models/Model selection
-```{r coyote mods}
+```{r coyote mods, eval=FALSE}
 
-coyote_mods_no250 <- final_df %>%
+coyote_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -952,7 +1169,7 @@ model.sel(coyote_mods_no250)
 
 Let's get the model summary for this model
 
-```{r coyote 4500 summary}
+```{r coyote 4500 summary, eval=FALSE}
 
 summary(coyote_mods_no250$`4500 meter buffer`)
 ```
@@ -961,9 +1178,9 @@ There is one lc class with a **very** high estimate and SE which seems a bit sus
 ## Fisher
 
 ### Models/Model selection
-```{r fisher mods}
+```{r fisher mods, eval=FALSE}
 
-fisher_mods_no250 <- final_df %>%
+fisher_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -1000,7 +1217,7 @@ model.sel(fisher_mods_no250)
 
 Let's print the summary for this model
 
-```{r fisher 2000 summary}
+```{r fisher 2000 summary, eval=FALSE}
 
 summary(fisher_mods_no250$`2000 meter buffer`)
 ```
@@ -1010,9 +1227,9 @@ Again lc_class34 has a very high standard error, we may not have enough data in 
 
 ### Models/Model selection
 
-```{r wolf mods}
+```{r wolf mods, eval=FALSE}
 
-wolf_mods_no250 <- final_df %>%
+wolf_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -1048,7 +1265,7 @@ model.sel(wolf_mods_no250)
 
 Let's get the model summary for this model
 
-```{r wolf 4500 summary}
+```{r wolf 4500 summary, eval=FALSE}
 
 summary(wolf_mods_no250$`4500 meter buffer`)
 ```
@@ -1058,9 +1275,9 @@ lc_class34 still presenting some issues, interesting that seismic lines weren't 
 
 ### Models/Model selection
 
-```{r lynx mods}
+```{r lynx mods,eval=FALSE}
 
-lynx_mods_no250 <- final_df %>%
+lynx_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -1097,7 +1314,7 @@ model.sel(lynx_mods_no250)
 
 Let's get the model summary
 
-```{r lynx 1000 summary}
+```{r lynx 1000 summary, eval=FALSE}
 
 summary(lynx_mods_no250$`1000 meter buffer`)
 ```
@@ -1106,9 +1323,9 @@ summary(lynx_mods_no250$`1000 meter buffer`)
 
 ### Models/Model selection
 
-```{r moose mods}
+```{r moose mods, eval=FALSE}
 
-moose_mods_no250 <- final_df %>%
+moose_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -1145,7 +1362,7 @@ model.sel(moose_mods_no250)
 
 Let's get the model summary
 
-```{r moose 3750 summary}
+```{r moose 3750 summary, eval=FALSE}
 
 summary(moose_mods_no250$`3750 meter buffer`)
 ```
@@ -1154,8 +1371,8 @@ summary(moose_mods_no250$`3750 meter buffer`)
 
 ### Models/Model selection
 
-```{r fox mods}
-fox_mods_no250 <- final_df %>%
+```{r fox mods, eval=FALSE}
+fox_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -1193,7 +1410,7 @@ model.sel(fox_mods_no250)
 
 Let's get the model summary
 
-```{r fox summary 3750}
+```{r fox summary 3750, eval=FALSE}
 
 summary(fox_mods_no250$`3750 meter buffer`)
 ```
@@ -1203,9 +1420,9 @@ Gagh! Borrow pits does not have a reasonable estimate and SE
 
 ### Models/Model selection
 
-```{r deer mods}
+```{r deer mods, eval=FALSE}
 
-deer_mods_no250 <- final_df %>%
+deer_mods_no250 <- final_osm_2023_df %>%
   
   # remove 350 meter buffer width
   purrr::discard_at('250 meter buffer') %>% 
@@ -1242,7 +1459,7 @@ model.sel(deer_mods_no250)
 
 Let's get the model summary
 
-```{r deer 3750 summary}
+```{r deer 3750 summary, eval=FALSE}
 
 summary(deer_mods_no250$`3750 meter buffer`)
 ```
@@ -1257,7 +1474,7 @@ What we need to do now is extract the coefficient estimates from each top model,
 The `confint()` function will extract the coefficients and CI intervals from a model, so what we need to do is make a list of all the models, then use the `map()` function in *purrr* to apply the `confint()` function to all the models and get the coefficients. We want this to result in a tibble that has a column for the HFI feature (we aren't plotting the lc_class data for this report), the upper and lower CI, and the coefficient estimate.
 
 In order to do this we have to do a bit of data wrangling, currently this isn't the most pleasing way to accomplish the desired outcome, but it works. 
-```{r extract coeffs}
+```{r extract coeffs, eval=FALSE}
 
 # This is also a dog shit way to do this but I need to get this done
 
@@ -1326,7 +1543,7 @@ In this code I also add a new column called uuid which contains the image id (uu
 [Phylopic.or](https://www.phylopic.org/) is an open source online database of silhouettes various contributors have created for use. There is an R package that works with this data called *rphylopic*; we can use the `get_uuid()` function from this package to extract the data for a silhouette for each species we want, which is what I've done here.
 
 
-```{r rbind coeffs}
+```{r rbind coeffs, eval=FALSE}
 
 # combine all list elements 
 coeffs_df_all <- list_rbind(top_models,
@@ -1356,7 +1573,7 @@ Now let's explore some different options to plot the coefficients
 ### All species
 
 Let's try plotting all the species on one plot using `ggplot()`
-```{r plot coeffs all}
+```{r plot coeffs all, eval=FALSE}
 
 # provide data and mapping aesthetics
 ggplot(coeffs_df_all, aes(x = feature, 
@@ -1383,8 +1600,8 @@ ggplot(coeffs_df_all, aes(x = feature,
 ```
 
 
-# 
-```{r select silhouettes}
+ 
+```{r select silhouettes, eval=FALSE}
 
 # combine all list elements 
 coeffs_df_all <- list_rbind(top_models,
@@ -1412,7 +1629,7 @@ coeffs_df_all <- list_rbind(top_models,
 
 After plotting the moose image I don't like it, let's manually replace it in the data
 
-```{r}
+```{r, eval=FALSE}
 # I went on the phylopic website and saw there are three images for moose, I like the last one better so we will use it
 
 get_uuid(name = 'Alces alces',
@@ -1434,7 +1651,7 @@ get_uuid(name = 'Vulpes',
 
 Try plotting all
 
-```{r}
+```{r, eval=FALSE}
 
 ggplot(coeffs_df_all, aes(x = feature, 
                           y = estimate, 
@@ -1459,7 +1676,7 @@ ggplot(coeffs_df_all, aes(x = feature,
 
 ```
 
-```{r}
+```{r, eval=FALSE}
 ggplot(coeffs, aes(x = feature, y = estimate)) +
   
   geom_point(size = 3, position = position_dodge(width = 0.5)) +
@@ -1481,4 +1698,5 @@ ggplot(coeffs, aes(x = feature, y = estimate)) +
         legend.title = element_text(size = 12),
         plot.title = element_text(size = 15, hjust = 0.5))
 ```
+
 If all else fails can use [plot_model function](https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_model_estimates.html)
