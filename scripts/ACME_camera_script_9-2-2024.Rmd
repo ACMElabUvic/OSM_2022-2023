@@ -91,6 +91,196 @@ library('withr') # used to temporarily set wd
 ```
 
 
+# Deployment data
+
+Let's start by importing the deployment data so we know how many cameras there are, info on the site names and arrays that were used for 2022-2023. We will use this data to compare with the other data failes (e.g. timelapse, covariates, etc.) to ensure those were entered correctly
+
+## Import deployment data
+Although we could read both of these files in as a list similar to the covariate data, they are more different and I want to perform a few cleaning operations that are different for each during the data import step so it is easier to import them separately
+
+```{r import deployment data}
+
+
+# read in deployment data and camera data files individually
+
+# deployment data
+deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
+                   
+                   # specify how we want the columns read in 
+                   col_types = cols(Project.ID = col_factor(),
+                                    Deployment.Location.ID = col_factor(),
+                                    Camera.Deployment.Begin.Date. = col_date(
+                                      format = "%d-%b-%y"),
+                                    Camera.Deployment.End.Date = col_date(
+                                      format = "%d-%b-%y"),
+                                    .default = col_character())) %>% 
+                   # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
+  
+  # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower() %>%  
+      
+      # replace the '.' with '_'
+      str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
+                      replacement = '_'))  # what you want the pattern to be replaced with
+  
+
+# # deployment site data
+# cameras <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv',
+#                     
+#                     # specify how we want the columns read in 
+#                     col_types = cols('Deploy Date' = col_date(
+#                       format = "%d-%b-%y"),
+#                       'Deploy Time' = col_time(),
+#                       Lat = col_number(),
+#                       Long = col_number(),
+#                       Grade = col_integer(),
+#                       Elevation = col_integer(),
+#                       'Distance to trail (m)' = col_number(),
+#                       'Distance to Lure' = col_number(),
+#                       'Comments and Access Notes' = col_character(),
+#                       .default = col_factor()
+#                     )) %>% 
+#   
+#   # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
+#   set_names(
+#     names(.) %>% 
+#       tolower()%>% 
+#       str_replace_all(pattern = ' ',
+#                       replacement = '_'))
+# 
+# # not sure if we need this data, may remove this section later if not needed.
+```
+
+## Data checks
+
+Let's take a look at this data as well and make sure everything is okay.
+
+Let's take a look at this data and make sure everything is okay.
+
+We'll start with the deployment data (deploy). We want to check that the data imported properly (each column is the type it should be) and that all the sites are accounted for and look correct. The deployment data files are what we will base our data checking for other files on because they should be the first ones that were generated and thus the most accurate (we hope). 
+
+### Structure 
+
+Make sure columns imported correctly
+```{r deploy str}
+
+# make sure the columns read in properly
+
+str(deploy)
+# everything looks good
+```
+
+### Arrays and sites
+
+Let's check the levels for the landscape units (project_id) and the sites (deployment_location_id) to make sure they look correct, but this data file should be correct and the one we will base other files on
+
+```{r deploy sites}
+# let's check the levels for the landscape units (project_id) and the sites (deployment_location_id) to make sure they match the other data
+
+levels(deploy$project_id)
+levels(deploy$deployment_location_id)
+
+
+```
+Arrays look good, but there are two sites with a '-' instead of a '_' , we will fix this in next step
+
+## Data manipulation
+
+This code will also likely need to be changed as year-specific issues arise but gives a starting point for reformatting the data to match some of the other data files and fixing the issues we found in the previous step.
+
+In the pipe below we first rename some of the columns to be shorter/match previous years' data files
+
+Then we fix the names of the specific site entries that were different from the detection data/entered incorrectly
+
+Finally, we select only the columns we need (dropping the deployment_id and camera_failure_details)
+
+Then we double check that the site names match the other data frame and they do!
+```{r data manipulation deploy}
+
+deploy_fixed <- deploy %>% 
+  
+  # rename start and end date so they are shorter
+  # rename project_id and deployment_location_id so they match previous years' columns
+  rename(start_date = camera_deployment_begin_date_,
+         end_date = camera_deployment_end_date,
+         array = project_id,
+         site = deployment_location_id) %>% 
+  
+  # rename site entries and remove prefix OSM from array
+  mutate(site = as.factor(case_when(site == 'LU15-44' ~ 'LU15_44',
+                                    site == 'LI15_03' ~ 'LU15_03',
+                                    TRUE  ~ site)),
+         array = str_remove(array, 
+                            pattern = "OSM_")) %>% 
+  
+  # remove columns we don't need
+  select(!c(camera_failure_details,
+            deployment_id))
+
+
+
+# check data again
+head(deploy_fixed)
+
+# check levels
+levels(deploy_fixed$site)
+```
+
+Now that this data is cleaned up we should save it to the data/processed folder
+
+```{r save deploy data}
+
+# save to processed data folder
+
+write_csv(deploy_fixed,
+          'data/processed/OSM_2022_deployment.csv')
+
+```
+
+
+# Camera operability 
+
+We can check the length each camera was operating using the cleaned deployment data
+
+```{r camera operability}
+
+# if starting from this point read in data
+deploy_fixed <- read_csv('data/processed/OSM_2022_deployment.csv')
+
+# create graph of camera operability
+
+ggplot(deploy_fixed, aes(color = array))+
+  
+  geom_segment(aes(x = start_date, 
+                   xend = end_date,
+                   y = site, 
+                   yend = site)) +
+  
+  theme(axis.text = element_text(size = 6))
+
+```
+
+Something weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. (This may not show up once the correction has been made to the raw data file). Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
+
+```{r LU15 camera deploy check}
+
+deploy_fixed %>% 
+  
+  filter(array == 'LU15') %>% 
+  
+ ggplot(., ) +
+  
+  geom_segment(aes(x = start_date,
+                   xend = end_date,
+                   y = site, 
+                   yend = site))
+```
+
+> the site we need to check in the raw data is LU15_12
+
+
 # Timelapse data
 
 If you opened the OSM_2022-2023.Rproj file you should have your working directory set to the GitHub repository that you downloaded to your hard drive.
@@ -590,6 +780,7 @@ ggsave('figures/OSM_2022_ind_det_per_LU.jpg',
 # Covariate data
 
 ## Import covariate data
+
 These data files have a similar format so we will read them in together using the `map()` function in the *purrr* package. Reminder, the `map()` function let's us perform iterations. The `~.x` after the function is a placeholder that refers to the data before the last pipe (e.g. the .csv files we supplied) and all operations within the `map()` will be performed on all of these objects. 
 
 ```{r import covariate data}
@@ -698,6 +889,7 @@ setdiff(levels(covariate_data$HFI$site),
 ## Join covariate data and format
 
 Now we need to join the HFI and VEG files together
+
 ```{r join covariate data}
 covariates_all <- covariate_data$HFI %>% 
   
@@ -745,182 +937,6 @@ write_csv(covariates_all_wide,
 ```
 
 
-# Deployment data
-
-## Import deployment data
-Although we could read both of these files in as a list similar to the covariate data, they are more different and I want to perform a few cleaning operations that are different for each during the data import step so it is easier to import them separately
-
-```{r import deployment data}
-
-
-# read in deployment data and camera data files individually
-
-# deployment data
-deploy <- read_csv('data/raw/OSM_2022_Deployment_Data.csv',
-                   
-                   # specify how we want the columns read in 
-                   col_types = cols(Project.ID = col_factor(),
-                                    Deployment.Location.ID = col_factor(),
-                                    Camera.Deployment.Begin.Date. = col_date(
-                                      format = "%d-%b-%y"),
-                                    Camera.Deployment.End.Date = col_date(
-                                      format = "%d-%b-%y"),
-                                    .default = col_character())) %>% 
-                   # the date columns could be read in as such if we needed but I don't think we use them and the date format is odd to get R to read
-  
-  # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
-  set_names(
-    names(.) %>% 
-      tolower() %>%  
-      
-      # replace the '.' with '_'
-      str_replace_all(pattern = '\\.', # provide the character pattern to look for (if you don't keep the \\ it won't work)
-                      replacement = '_'))  # what you want the pattern to be replaced with
-  
-
-# deployment site data
-cameras <- read_csv('data/raw/OSM_2022_Deployment_Site_Data.csv',
-                    
-                    # specify how we want the columns read in 
-                    col_types = cols('Deploy Date' = col_date(
-                      format = "%d-%b-%y"),
-                      'Deploy Time' = col_time(),
-                      Lat = col_number(),
-                      Long = col_number(),
-                      Grade = col_integer(),
-                      Elevation = col_integer(),
-                      'Distance to trail (m)' = col_number(),
-                      'Distance to Lure' = col_number(),
-                      'Comments and Access Notes' = col_character(),
-                      .default = col_factor()
-                    )) %>% 
-  
-  # set the column names to lower case and replace the spaces with '_' (these are both personal preferences of mine)
-  set_names(
-    names(.) %>% 
-      tolower()%>% 
-      str_replace_all(pattern = ' ',
-                      replacement = '_'))
-
-# not sure if we need this data, may remove this section later if not needed.
-```
-
-## Data checks
-
-Let's take a look at this data as well and make sure everything is okay.
-
-We'll start with the deployment data (deploy)
-
-```{r data check deploy}
-
-# make sure the columns read in properly
-
-str(deploy)
-# everything looks good
-
-# let's check the levels for the landscape units (project_id) and the sites (deployment_location_id) to make sure they match the other data
-
-levels(deploy$project_id)
-levels(deploy$deployment_location_id)
-
-setdiff(levels(OSM_2022_det_ind$site),
-        levels(deploy$deployment_location_id))
-
-
-```
-
-## Data manipulation
-
-This code will also likely need to be changed as year-specific issues arise but gives a starting point for reformatting the data to match some of the other data files and fixing the issues we found in the previous step.
-
-In the pipe below we first rename some of the columns to be shorter/match previous years' data files
-
-Then we fix the names of the specific site entries that were different from the detection data/entered incorrectly
-
-Finally, we select only the columns we need (dropping the deployment_id and camera_failure_details)
-
-Then we double check that the site names match the other data frame and they do!
-```{r data manipulation deploy}
-
-deploy_fixed <- deploy %>% 
-  
-  # rename start and end date so they are shorter
-  # rename project_id and deployment_location_id so they match previous years' columns
-  rename(start_date = camera_deployment_begin_date_,
-         end_date = camera_deployment_end_date,
-         array = project_id,
-         site = deployment_location_id) %>% 
-  
-  # rename site entries and remove prefix OSM from array
-  mutate(site = as.factor(case_when(site == 'LU15-44' ~ 'LU15_44',
-                                    site == 'LI15_03' ~ 'LU15_03',
-                                    TRUE  ~ site)),
-         array = str_remove(array, 
-                            pattern = "OSM_")) %>% 
-  
-  # remove columns we don't need
-  select(!c(camera_failure_details,
-            deployment_id))
-
-
-# check to see that the above code worked for renaming sites
-setdiff(levels(deploy_fixed$site),
-        levels(detections$site))
-
-# now they match
-```
-
-Now that this data is cleaned up we should save it to the data/processed folder
-
-```{r save deploy data}
-
-# save to processed data folder
-
-write_csv(deploy_fixed,
-          'data/processed/OSM_2022_deployment.csv')
-
-```
-
-
-# Camera operability 
-
-We can check the length each camera was operating using the cleaned deployment data
-
-```{r camera operability}
-
-# if starting from this point read in data
-deploy_fixed <- read_csv('data/processed/OSM_2022_deployment.csv')
-
-# create graph of camera operability
-
-ggplot(deploy_fixed, aes(color = array))+
-  
-  geom_segment(aes(x = start_date, 
-                   xend = end_date,
-                   y = site, 
-                   yend = site)) +
-  
-  theme(axis.text = element_text(size = 6))
-
-```
-
-Something weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. (This may not show up once the correction has been made to the raw data file). Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
-
-```{r LU15 camera deploy check}
-
-deploy_fixed %>% 
-  
-  filter(array == 'LU15') %>% 
-  
- ggplot(., ) +
-  
-  geom_segment(aes(x = start_date,
-                   xend = end_date,
-                   y = site, 
-                   yend = site))
-```
-
-> the site we need to check in the raw data is LU15_12
 
 
 # Response metrics

@@ -56,6 +56,8 @@ University of Victoria
 School of Environmental Studies     
 Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)      
 
+(*update/add authors as needed*)
+
 ## Install packages
 
 If you don't already have the following packages installed, use the code below to install them.
@@ -177,30 +179,7 @@ str(detections)
 
 ```
 
-We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
-
-```{r det subset longhand, eval=FALSE}
-# we will also want to create a data frame for each LU to plot individually
-
-# LU1
-dets_LU1 <- detections %>% 
-  filter(array == 'LU01')
-
-# LU13
-dets_LU13 <- detections %>% 
-  filter(array == 'LU13')
-
-# LU15
-dets_LU15 <- detections %>% 
-  filter(array == 'LU15')
-
-# LU21
-dets_LU21 <- detections %>% 
-  filter(array == 'LU21')
-
-```
-
-# Marissa's attempt at a for loop to subset data by array
+## Subset data
 
 We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
 
@@ -548,273 +527,17 @@ final_det_occ_plots <- list(LU1_det_occ_plots,
 
 ## Read in data
 
-We need the proportional binomial data and the covariate data (from the ACME_camera_script_9-2-2024.R or .Rmd), let's read those in now and check the structure of each
-
-```{r read data}
-
+```{r}
 # response metric (proportional detections from the from the ACME_camera_script_9-2-2024.R or .Rmd)
 prop_detections <- read_csv('data/processed/OSM_2022_proportional_detections.csv')
 
 # check variable structure
 str(prop_detections)
 
-# model covariates (merged HFI and VEG data from the ACME_camera_script_9-2-2024.R or .Rmd)
-covariates <- read_csv('data/processed/OSM_2022_covariates.csv',
-                       
-                       # set the column types to read in correctly
-                       col_types = cols(array = col_factor(),
-                                        camera = col_factor(),
-                                        site = col_factor(),
-                                        buff_dist = col_factor(),
-                                        .default = col_number()))
-
-# check variable structure
-str(covariates)
 
 ```
 
-## Format covariates
-
-There are too many covariates to include in the models individually and many of them describe similar HFI features. We can use the info from the README file in this repository which includes detailed descriptions from 
-the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html) **OR** in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf).
-
-> the current version of this code for the purposes of the 2022-2023 report used a merged dataset from 2021-2022 and 2022-2023 data, howver each year of data the variables were extracted slightly differenty from GIS so final version of this code will include a different formatting process which will likely occur in the ACME_camera_script_9-2-2024.R or .Rmd'
-
-First lets order the columns alphabetically so we can look at descriptions for everything in the ABMI doc easier. We will want the non-covariate columns (i.e., array, site, camera, buffer_dsit) at the front so we can use relocate after we order all of the columns to move these four to the front of the data.
-
-```{r order covs}
-
-covariates <- covariates %>% 
-  
-  # order columns alphabetically
-  select(order(colnames(.))) %>% 
-  
-  # we want to move the columns that aren't HFI features or landcover to the front
-  relocate(.,
-           c(array,
-             site,
-             camera,
-             buff_dist))  
-
-# get a list of column names to ensure it worked
-names(covariates)
-```
-
-Let's get a summary of each variable now, and lets filter by just the 1000m buffer width so we don't have a bunch of repeated data for each buffer width at each site, this will give us general insights into how much variability we have with each feature at a general buffer width. *You can change this if you are interested in a different bufffer width specifically, or if it makes more since to see the data for the min (250m) or max (5000m) buffer width.
-
-```{r covs summary}
-
-covariates %>% 
-  # filter to just buffer 1000 m
-  filter(buff_dist == 1000) %>% 
-  
-  summary(.)
-```
-
-
-Let's also plot histograms of each variable for data visualization in a for loop, I wanted to do this for just one buffer size to reduce replicates but it will also drop any variables for which all the data are zeros, so you could explore this at different buffer widths or just remove the filter function and look at all the data which is what I do below once it is grouped
-
-```{r covs histograms}
-
-# filter to just one buffer width
-
-covariates_1000 <- covariates %>%  
-  
-  filter(buff_dist == 1000)
-
-for (col in 1:ncol(covariates_1000)) {
-    hist(covariates_1000[,col])
-}
-```
-
-Now we can use the information from the previous few steps as well as the variable descriptions from the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html) which is stored in the 'relevant literature' portion of this document **AND** also copied into the README file, to group the covariates so we reduce the number of potential variables to explore in the modeling phase. 
-
-We will use the `mutate()` function with some tidyverse trickery (i.e., nesting `across()` and `contains()` in `rowsums()`) to sum across each observation (row) by searching for various character strings. If there isn't a common character string for multiple variables we want to sum then we provide each one individually. We can also combine these methods (e.g., with 'facilities' [see code]).
-
-```{r format covs}
-
-covariates_grouped <- covariates %>% 
-  
-  # rename 'vegetated_edge_roads so that we can use road as keyword to group roads without including this feature
-  rename('vegetated_edge_rds' = vegetated_edge_roads) %>% 
-  
-  # within the mutate function create new column names for the grouped variables
-  mutate(
-    # borrowpits
-    borrowpits = rowSums(across(contains('borrowpit'))) + # here we use rowsums with across() and contains() to sum acrross each row any values for columns that contain the keyword above. Be careful when using that there aren't any variables that match the string (keyword) provided that you don't want to include!
-      
-      dugout +
-      lagoon +
-      sump,
-    
-    
-    # clearings
-    clearings = rowSums(across(contains('clearing'))) +
-      runway,
-    
-    # cultivations
-    cultivation = crop + 
-      cultivation_abandoned +
-      fruit_vegetables +
-      rough_pasture +
-      tame_pasture,
-    
-    # harvest areas
-    harvest = rowSums(across(contains('harvest'))),
-    
-    # industrial facilities
-    facilities = rowSums(across(contains('facility'))) +
-      rowSums(across(contains('plant'))) +
-      camp_industrial +
-      mill +
-      ris_camp_industrial +
-      ris_tank_farm +
-      ris_utilities +
-      urban_industrial,
-    
-    # mine areas
-    mines = rowSums(across(contains('mine'))) +
-      rowSums(across(contains('tailing'))) +
-      grvl_sand_pit +
-      peat +
-      ris_drainage +
-      ris_oilsands_rms +
-      ris_overburden_dump +
-      ris_reclaim_ready +
-      ris_soil_salvaged +
-      ris_waste,
-    
-    # railways
-    railways = rowSums(across(contains('rlwy'))),
-    
-    # reclaimed areas
-    reclaimed = rowSums(across(contains('reclaimed'))) +
-      ris_soil_replaced +
-      ris_windrow,
-    
-    # recreation areas
-    recreation = campground +
-      golfcourse +
-      greenspace +
-      recreation,
-    
-    # residential areas (can't use residence as keyword because 'residence_clearing' is in clearing unless we rearrange groupings or rename that one)
-    residential = country_residence +
-      rural_residence +
-      urban_residence,
-    
-    # roads (we renamed 'vegetated_edge_roads' above to 'vegetated_edge_rds' so we can use roads as keyword here which saves a bunch of coding as there are many many road variables)
-    roads = rowSums(across(contains('road'))) +
-      interchange_ramp +
-      airp_runway +
-      ris_airp_runway,
-    
-    # seismic lines
-    seismic_lines = rowSums(across(contains('seismic'))),
-    
-    # transmission lines
-    transmission_lines = rowSums(across(contains('transmission'))),
-    
-    # trails
-    trails = rowSums(across(contains('trail'))),
-    
-    # vegetated edges
-    veg_edges = rowSums(across(contains('vegetated'))) +
-      surrounding_veg,
-    
-    # man-made water features
-    water = canal +
-      reservoir,
-    
-    # well sites (this probably includes 'clearing_wellpad' need to check)
-    wells = rowSums(across(contains('well'))),
-    
-    # remove columns that were used to create new columns to tidy the data frame
-         .keep = 'unused') %>% 
-  
-  # reorder variables so the veg data is after all the HFI data
-  relocate(starts_with('lc_class'),
-           .after = wells)
-
-# see what's left
-names(covariates_grouped)
-
-# check the structure of new data
-str(covariates_grouped)
-
-# check summary of new data
-summary(covariates_grouped)
-
-# there are some NAs in the data which will cause problems with modeling/visualization of data ignore for now but will explore these sites specifically after report
-
-covariates_grouped <- covariates_grouped %>% 
-  
-  # remove rows with NAs
-  na.omit()
-
-```
-
-
-Let's look at the histograms again and see if we need to remove any features or feature groups without enough data
-
-```{r covs grouped histograms}
-
-# use for loop to plot histograms for all covariates
-
-for (col in 5:ncol(covariates_grouped)) {
-    hist(covariates_grouped[,col])
-}
-```
-> IMO we don't have enough variation in data to use the following features/feature groups
-
-* cfo     
-* Cultivation   
-* Reclaimed   
-* Recreation    
-* Reservoir   
-* Residential 
-* Water
-* lc_class120 (aka agriculture)
-* lc_class32 (aka rocks and rubble)   
-
-We also don't have any data for following features since they don't plot with the `hist()` function
-
-* Interchange ramp 
-* Landfill  
-* railways
-
-So let's modify this data and remove those features for now **this step will need to be changed each year likely**
-
-```{r covs remove features}
-
-covariates_grouped <- covariates_grouped %>% 
-  
-  # remove features we don't need
-  select(!c(cfo,
-            cultivation,
-            reclaimed,
-            recreation,
-            residential,
-            water,
-            lc_class120,
-            lc_class32,
-            landfill,
-            transfer_station,
-            railways))
-
-# check that it worked
-names(covariates_grouped)
-```
-
-
-## Subset data & correlation plots
-
-> Marissa try to get the purrr code for this to work later
-
-Now we need to subset the data for each buffer width, and then in the same loop let's make correlation plots for these variables within each buffer
-
-```{r sub data cor plots}
-
+```{r}
 # Couldn't get this to work in purrr yet so using a loop to subset the data, create the plots, and save them all in one section... NEAT
 
 buffer_frames <- list()
@@ -851,78 +574,6 @@ for (i in unique(covariates_grouped$buff_dist)){
  dev.off()
   
 }
-
-
-# name list objects so we can extract names for plotting 
-
-buffer_frames <- buffer_frames %>% 
-  
-  # absurdly long way to do this but for sake of time fuck it
-  purrr::set_names('250 meter buffer',
-                   '500 meter buffer',
-                   '750 meter buffer',
-                   '1000 meter buffer',
-                   '1250 meter buffer',
-                   '1500 meter buffer',
-                   '1750 meter buffer',
-                   '2000 meter buffer',
-                   '2250 meter buffer',
-                   '2500 meter buffer',
-                   '2750 meter buffer',
-                   '3000 meter buffer',
-                   '3250 meter buffer',
-                   '3500 meter buffer',
-                   '3750 meter buffer',
-                   '4000 meter buffer',
-                   '4250 meter buffer',
-                   '4500 meter buffer',
-                   '4750 meter buffer',
-                   '5000 meter buffer')
-
-```
-You will get a warning about standard deviation is zero for buffer 250
-
-
-## Exploratory plots
-
-> add more to this section in later when we have more time to explore the covariates and choose which should be inlcuded etc.
-
-```{r hfi histograms}
-
-# use this code to change figure margins otherwise will not plot because figure margines are too large
-par(mar=c(1,1,1,1))
-
-# now use purrr to plot histograms for all remaining HFI variables for each buffer
-hfi_histograms <- buffer_frames %>% 
-  
-  purrr::imap(
-    ~.x %>% 
-      
-      # filter to just the HFI variables 
-      select(where(is.numeric) &
-          ! starts_with('lc_class')) %>% 
-      
-      # pipe into hist.data.frame function to make histograms for each variable
-      hist.data.frame(mtitl = paste0('Histograms of HFI variables at ', .y)))
-
-
-```
-
-Now let's do the same thing with the landcover variables
-
-```{r lc histograms}
-
-lc_histograms <- buffer_frames %>% 
-  
-  purrr::imap(
-    ~.x %>% 
-      
-      # filter to just the landcover variables 
-      select(where(is.numeric) &
-          starts_with('lc_class')) %>% 
-      
-      # pipe into hist.data.frame function to make histograms for each variable
-      hist.data.frame(mtitl = paste0('Histograms of landcover variables at ', .y)))
 ```
 
 
