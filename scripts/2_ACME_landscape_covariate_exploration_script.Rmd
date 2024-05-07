@@ -47,7 +47,7 @@ If you are running this with the 2022-2023 data make sure you download the whole
 
 Also make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data.
 
-Lastly, if you are looking to adapt this code for a future year of data, you will want to ensure you have run the ACME_camera_script_9-2-2024.R or .Rmd with your data as there is much data formatting, cleaning, and restructuring that has to be done before this code will work.
+Lastly, if you are looking to adapt this code for a future year of data, you will want to ensure you have run the 1_ACME_camera_script_9-2-2024.R or .Rmd with your data as there is much data formatting, cleaning, and restructuring that has to be done before this code will work. *Helpful note: The files are numbered in the order they are used for this analysis*.
 
 If you have question please email the most recent author, currently 
 
@@ -84,46 +84,102 @@ library(Hmisc) # used to generate histograms for all variables in data frame
 ```
 
 
-# Read in covariate data
+# Data
 
-To do any analysis with the detection data from the OSM arrays, we will want to pair it with the covaraite data which has human factors indices (HFI) and landcover data (VEG) for each site. There are a lot of covaraites/features in these datasets that need to be grouped together to be usable, which is what this script covers. 
+## Import data
 
-Let's read in the covariate data (outputs from the ACME_camera_script_9-2-2024.Rmd)
+To do any analysis with the detection data from the OSM arrays, we will want to pair it with the covariate data which has human factors indices (HFI) and landcover data (VEG) for each site. There are a lot of covariates/features in these datasets that need to be grouped together to be usable, which is what this script covers. 
+
+Let's read in the covariate data  **for all 6 LUs** (outputs from the 2021-2022 and 2022-2023 1_ACME_camera_script_9-2-2024.Rmd). We've copied the 2021-2022 data from the OSM_2021-2022 repository and saved it to the processed folder so we can read in both data files with the same file path.
 
 ```{r read data}
 
 # model covariates (merged HFI and VEG data from the ACME_camera_script_9-2-2024.R or .Rmd)
-covariates <- read_csv('data/processed/OSM_2022_covariates.csv',
-                       
-                       # set the column types to read in correctly
-                       col_types = cols(array = col_factor(),
-                                        camera = col_factor(),
-                                        site = col_factor(),
-                                        buff_dist = col_factor(),
-                                        .default = col_number()))
+covariates <-  file.path('data/processed',
+                         
+                         c('OSM_covariates_2022.csv',
+                           'OSM_covariates_2021.csv')) %>% 
+  
+  map(~.x %>%
+        read_csv(.,
+                 
+                 # set the column types to read in correctly
+                 col_types = cols(array = col_factor(),
+                                  camera = col_factor(),
+                                  site = col_factor(),
+                                  buff_dist = col_factor(),
+                                  .default = col_number()))) %>% 
+  
+  # give names to each data frame in list
+  purrr::set_names('covs_2022',
+                   'covs_2021') # R doesn't like when they are just numbers, you can make it work but it's annoying to call the data frame later so I've called them covs_year
 
 # check variable structure
 str(covariates)
 
 ```
+You may get a warning about parsing issues, don't panic this is fine.
 
-# Data exploration
+## Join data
 
-There are too many covariates to include in the models individually and many of them describe similar HFI features. 
+We want one singular covariate data frame, not two list elements with separate data frames as we have now. So we need to join the two data frames. We've done our best to ensure these are formatted similarly but unfortunately they still don't have the exact same number of columns so they won't rbind nicely with the base R function. 
 
-> Now that this section is finalized, we will use the structure outlined in the covariates_table.docx which can be found in the 'relevant_literature' folder of this repository for formatting the covariates for this and future related analyses. However, the code below outlines a process to explore the data which led to some of the decisions in the covariates_table.docx in case someone wants to group the data in a different way they have code to explore it
+This is likely to be the case each year, but we can use the *dplyr* function `bind_rows()` which will rbind any rows where the columns match and will fill any rows where there are extra columns with NAs.
+
+```{r bind data}
+
+covariates_merged <- dplyr::bind_rows(covariates$covs_2022,
+                                      covariates$covs_2021)
+
+head(covariates_merged)
+```
+
+Let's check over this data to make sure the bind worked how we expected it to.
+
+### Structure
+
+While we specified how the columns should read in when we imported the data, this could change during the merge or from year-to-year so let's double check the data structure now that all 6 LUs are in one data frame.
+
+We can also check that all the LUs are indeed in the data and all the sites. We should have 6 LUs and 233 sites (155 from 2022-2023 and 78 from 2021-2022)
+
+```{r bind data str}
+
+str(covariates_merged)
+```
+Looks like everything read in correctly, I don't see any missing columns (we won't need the lab or gridcll column which we can deselect later),  and all the arrays (LUs) and sites are accounted for. 
+
+### NAs
+
+Let's check the data summary now, we might have NAs for some of the HFI features but otherwise shouldn't have any for the other variables.
+
+```{r bind data NAs}
+
+summary(covariates_merged)
+```
+This looks good, we will want to replace the NAs with zeros during data formatting because the only reason we have NAs is because there weren't any of those features in the other data file, and since these calculate proportions of each feature that would make the proportion zero, and we don't want to lose the other data for those sites. 
 
 
-The covariate_table and the README file in this repository include descriptions of each feature from 
-the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html); which can also be found in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf).
+# Data formatting
 
-## Order data
+This section will need to be altered year-to-year to accommodate various issues that are unique to each year, but offers a good starting point. 
 
-First lets order the columns alphabetically so we can look at descriptions for everything in the ABMI doc easier. We will want the non-covariate columns (i.e., array, site, camera, buffer_dsit) at the front so we can use relocate after we order all of the columns to move these four to the front of the data.
+I like to do as much of my data manipulation I can in one *dplyr* pipe (i.e. code chunk) to avoid extra coding and assigning intermediate objects to the environment that I don't need, but if this format doesn't make sense to you, each step can be done individually if you pull the code out of the pipeline and reference the data within each function. I do write each step individually and check that it's working correctly as I go.
 
-```{r order covs}
+In the code chunk below I,
 
-covariates <- covariates %>% 
+1. remove the camera, lab, and gridcll columns we don't need   
+2. reorder columns alphabetically except array, site, and buffer_dist which will be at the front  
+3. replace NAs with zeros     
+
+Then we run summary to check that everything worked. (If you have other formatting to do you may need to use other functions to check that everything worked)
+```{r bind data formatting}
+
+covariates_fixed <- covariates_merged %>% 
+  
+  # remove columns we won't use anymore
+  select(!c(camera, 
+            gridcll,
+            lab)) %>%  
   
   # order columns alphabetically
   select(order(colnames(.))) %>% 
@@ -132,53 +188,68 @@ covariates <- covariates %>%
   relocate(.,
            c(array,
              site,
-             camera,
-             buff_dist))  
-
-# get a list of column names to ensure it worked
-names(covariates)
-```
-## Summary 1000m
-
-Let's get a summary of each variable now, and lets filter by just the 1000m buffer width so we don't have a bunch of repeated data for each buffer width at each site, this will give us general insights into how much variability we have with each feature at a general buffer width. *You can change this if you are interested in a different bufffer width specifically, or if it makes more since to see the data for the min (250m) or max (5000m) buffer width.
-
-```{r covs summary}
-
-covariates %>% 
-  # filter to just buffer 1000 m
-  filter(buff_dist == 1000) %>% 
+             buff_dist)) %>% 
   
-  summary(.)
-```
+  # replace NAs introduced from joining data to zeros
+  replace(is.na(.),
+          0)
 
-## Histograms 1000m
-
-Let's also plot histograms of each variable for data visualization in a for loop, I wanted to do this for just one buffer size to reduce replicates but it will also drop any variables for which all the data are zeros, so you could explore this at different buffer widths or just remove the filter function and look at all the data which is what I do below once it is grouped
-
-```{r covs histograms}
-
-# filter to just one buffer width
-
-covariates_1000 <- covariates %>%  
+# check that everything looks good  
+summary(covariates_fixed)
   
-  filter(buff_dist == 1000)
-
-for (col in 1:ncol(covariates_1000)) {
-    hist(covariates_1000[,col])
-}
 ```
 
-Now we can use the information from the previous few steps as well as the variable descriptions from the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html) which is stored in the 'relevant literature' portion of this document **AND** also copied into the README file, to group the covariates so we reduce the number of potential variables to explore in the modeling phase. 
+## Finish covariate data
 
-# Format covariates
+### Save data
+
+Let's save this merged and cleaned file in case someone wants it and will do their own grouping/exploration (e.g., the next steps in this script). 
+
+Make sure when naming files we follow the best data managements practices for the ACME lab [outlined here](https://docs.google.com/document/d/1Tvz9-kLnMPp5HId9UOrUI0YNhUIK0t3c/edit).
+
+```{r save bind data}
+
+# save data in data processed folder
+write_csv(covariates_fixed,
+          'data/processed/OSM_covariates_merged_2021_2022.csv')
+```
+
+### Remove messy data
+
+Now that we've merged, cleaned, and reformatted the data we don't need the list file or messy merged data anymore. Let's remove these from the environment so we don't accidentally use them. 
+
+```{r rm messy data}
+
+rm(covariates_merged,
+   covariates)
+```
+
+
+# Data formatting
+
+There are too many covariates to include in the models individually and many of them describe similar HFI features. 
+
+> Now that this section is finalized, we will use the structure outlined in the covariates_table.docx which can be found in the 'relevant_literature' folder of this repository for formatting the covariates for this and future related analyses.
+
+The covariate_table and the README file in this repository include descriptions of each feature from 
+the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html); which can also be found in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf).
+
 
 ## Group covaraites
 
-We will use the `mutate()` function with some tidyverse trickery (i.e., nesting `across()` and `contains()` in `rowsums()`) to sum across each observation (row) by searching for various character strings. If there isn't a common character string for multiple variables we want to sum then we provide each one individually. We can also combine these methods (e.g., with 'facilities' [see code]).
+As we prepare to lump the covariates together, we may need to reference the column names. Let's print that now so we have it fresh in the console. 
+
+```{r covs names}
+
+names(covariates_fixed)
+```
+
+
+Now we will use the `mutate()` function with some tidyverse trickery (i.e., nesting `across()` and `contains()` in `rowsums()`) to sum across each observation (row) by searching for various character strings. If there isn't a common character string for multiple variables we want to sum then we provide each one individually. We can also combine these methods (e.g., with 'facilities' [see code]).
 
 ```{r format covs}
 
-covariates_grouped <- covariates %>% 
+covariates_grouped <- covariates_fixed %>% 
   
   # rename 'vegetated_edge_roads so that we can use road as keyword to group roads without including this feature
   rename('vegetated_edge_rds' = vegetated_edge_roads) %>% 
@@ -258,7 +329,7 @@ covariates_grouped <- covariates %>%
     # seismic lines
     seismic_lines = conventional_seismic,
     
-    # 3D sesimic lines
+    # 3D sesimic lines (put the 3D at the end though to make R happy)
     seismic_lines_3D = low_impact_seismic,
     
     # transmission lines
@@ -280,6 +351,15 @@ covariates_grouped <- covariates %>%
     
     # remove columns that were used to create new columns to tidy the data frame
          .keep = 'unused') %>% 
+  
+  # reorder alphabetically except array, site and buff_dist
+  select(order(colnames(.))) %>% 
+  
+  # we want to move the columns that aren't HFI features or landcover to the front
+  relocate(.,
+           c(array,
+             site,
+             buff_dist)) %>% 
   
   # reorder variables so the veg data is after all the HFI data
   relocate(starts_with('lc_class'),
@@ -318,11 +398,12 @@ for (col in 5:ncol(covariates_grouped)) {
 ```
 > IMO we don't have enough variation in data to use the following features/feature groups
 
-* cfo     
-* Cultivation   
+* cfo  
+* clearings
+* Cultivation 
+* railways
 * Reclaimed   
 * Recreation    
-* Reservoir   
 * Residential 
 * Water
 * lc_class_20 (aka water)   
@@ -330,20 +411,17 @@ for (col in 5:ncol(covariates_grouped)) {
 * lc_class32 (aka rocks and rubble) 
 * lc_class33 (aka exposed land)   
 
-We also don't have any data for following features since they don't plot with the `hist()` function
-
-* Landfill  
-* railways
 
 Also, there's not a lot of data for the following features, which are similar and of interest to OSM, so in the past they've been grouped together and we will here as well
 
 * Borrowpits    
-* Clearings   
 * Facilities    
 * Mines
 
+> For this analysis we will also combine facilities and mines
 
-## Format covariates further
+
+## Group covariates further
 
 So let's modify this data and remove those features for now **this step will need to be changed each year likely**
 
@@ -388,6 +466,30 @@ covariates_grouped <- covariates_grouped %>%
 # check that it worked
 names(covariates_grouped)
 ```
+
+## Save grouped data
+
+Let's save this data now that it's all formatted and grouped.
+
+```{r save grouped data}
+
+write_csv(covariates_grouped,
+          'data/processed/OSM_covariates_grouped_2021_2022.csv')
+```
+
+
+## Remove messy data
+
+Let's remove the data frames we no longer need. 
+
+```{r rm messy data 2}
+
+rm(covariates_fixed)
+```
+
+
+
+# Data exploration 
 
 ## Subset data by buffer
 
@@ -438,6 +540,8 @@ buffer_frames <- buffer_frames %>%
 
 Now we have a list with data frames for each buffer width which we can work with later. 
 
+> We will need to repeat this step in the analysis script
+
 
 # Autocorellation
 
@@ -455,23 +559,39 @@ correlation_plots <- buffer_frames %>%
       # select numeric variables only since we can't compute a r2 for non-numeric
       select_if(is.numeric) %>% 
       
-      # use chart.correlation in
+      # use chart.correlation 
       chart.Correlation(.,
                         histogram = TRUE, 
                         method = "pearson")
   )
 ```
 
-## Correlation table
-
 
 ## 250m
+
+```{r}
+
+buffer_frames$`250 meter buffer` %>% 
+  
+  select_if(is.numeric) %>% 
+  
+   # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+
+mtext('250 meter buffer', side = 3, line = 3)
+  
+```
+
 
 There is a section for each buffer width outlining the variables that are autocorrelated and thus should not be included in the same model, it includes the r2 as well
 
 * roads & LC
 
 ## 500m
+
+## 
 
 
 ## Exploratory plots
