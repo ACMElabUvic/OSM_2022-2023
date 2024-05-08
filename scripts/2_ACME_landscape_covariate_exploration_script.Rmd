@@ -159,7 +159,7 @@ summary(covariates_merged)
 This looks good, we will want to replace the NAs with zeros during data formatting because the only reason we have NAs is because there weren't any of those features in the other data file, and since these calculate proportions of each feature that would make the proportion zero, and we don't want to lose the other data for those sites. 
 
 
-# Data formatting
+## Data formatting
 
 This section will need to be altered year-to-year to accommodate various issues that are unique to each year, but offers a good starting point. 
 
@@ -567,9 +567,11 @@ correlation_plots <- buffer_frames %>%
 ```
 
 
+There is a section for each buffer width outlining the variables that are autocorrelated and thus should not be included in the same model, it includes the r2 as well
+
 ## 250m
 
-```{r}
+```{r cor 250, warning=FALSE}
 
 buffer_frames$`250 meter buffer` %>% 
   
@@ -584,14 +586,47 @@ mtext('250 meter buffer', side = 3, line = 3)
   
 ```
 
-
-There is a section for each buffer width outlining the variables that are autocorrelated and thus should not be included in the same model, it includes the r2 as well
-
-* roads & LC
+* pipeline & transmission_lines 0.53    
+* roads & veg_edges 0.71
+* roads & lc_developed 0.57
 
 ## 500m
 
-## 
+```{r cor 500, warning=FALSE}
+
+buffer_frames$`500 meter buffer` %>% 
+  
+  select_if(is.numeric) %>% 
+  
+   # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+
+mtext('500 meter buffer', side = 3, line = 3)
+  
+```
+
+* harvest &  lc_mixed 
+* pipeline & transmission_lines 0.64  
+* pipeline & roads 0.59   
+* pipeline & veg edges 0.57   
+* pipeline & wells 0.75   
+* pipeline & lc_grassland 0.62    
+* roads & veg edges 0.79    
+* roads & wells 0.75    
+* roads & lc_developed 0.75      
+* roads & osm_industrial 0.72   
+* veg edges & wells 0.61    
+* veg edges & lc_developed 0.88      
+* wells & lc_grassland 0.61       
+* wells & lc_developed 0.67      
+* coniferous & broadleaf -0.77    
+
+
+## 750m
+
+
 
 
 ## Exploratory plots
