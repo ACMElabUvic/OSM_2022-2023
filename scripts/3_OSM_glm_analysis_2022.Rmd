@@ -1083,6 +1083,8 @@ ggplot(bear_model_odds, aes(x = feature,
   theme_classic() +
   
   theme(axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 90,
+                                   hjust = 1),
         axis.title = element_text(size = 16),
         axis.text = element_text(size = 14))
 ```
