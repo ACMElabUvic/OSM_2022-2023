@@ -1,7 +1,7 @@
 ---
 title: "OSM report 2022-2023"
 author: "Marissa Dyck"
-date: "2024-03-25"
+date: "2024-05-08"
 output: 
   html_document:
     theme: journal
@@ -46,7 +46,7 @@ If you are running this with the 2022-2023 data make sure you download the whole
 
 Also make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data.
 
-Lastly, if you are looking to adapt this code for a future year of data, you will want to ensure you have run the ACME_camera_script_9-2-2024.R or .Rmd with your data as there is much data formatting, cleaning, and restructuring that has to be done before this code will work.
+Lastly, if you are looking to adapt this code for a future year of data, you will want to ensure you have run the 2_ACME_landscape_covariate_exploration_script.Rmd with your data as there is much data formatting, cleaning, and restructuring that has to be done before this code will work. *Helpful note: The files are numbered in the order they are used for this analysis*.
 
 If you have question please email the most recent author, currently   
 
@@ -72,6 +72,7 @@ install.packages('glmmTMB')
 install.packages('MuMIn')
 install.packages('TMB', type = 'source')
 install.packages('rphylopic')
+install.packages('broom')
 ```
 
 ## Load libraries
@@ -87,29 +88,86 @@ library(Hmisc) # used to generate histograms for all variables in data frame
 library(glmmTMB)      #Constructing GLMMs
 library(MuMIn) # for model selection
 library(rphylopic) # add animal silhouettes to graphs
+library(broom) # extracting odds ratios in a tidy format
 
 ```
 
-# Data
+# Summary statistics
 
 ## Load detection data
 
-Read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R.
+Read in saved and cleaned detection data for the 6 LUs from 2021-2022 and 2022-2023 e.g., the 1_ACME_camera_script_9-2-2024.R.
+
+These are two separate files from the two different fiscal years, so they need to be imported and then merged into one data file for plotting. Since both are stored in the data/processed/ folder we can read them both in as a list with *purrr*.
 
 ```{r data}
 
 # detection data
 # read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R 
-detections <- read_csv('data/processed/OSM_2022_ind_det.csv') %>% 
+detections <- file.path('data/processed',
+                        
+                        c('OSM_ind_det_2021.csv',
+                          'OSM_ind_det_2022.csv')) %>% 
   
-  # change site, species and event_id to factor
-  mutate_if(is.character,
-            as.factor)
+ map(~.x %>%
+        read_csv(.) %>% 
+       
+       # ensure the array, site, species, and event_id read in as factors
+       mutate_if(is.character,
+                 as.factor)) %>% 
+  
+  # give names to each data frame in list
+  purrr::set_names('dets_2021',
+                   'dets_2022') # R doesn't like when they are just numbers, you can make it work but it's annoying to call the data frame later so I've called them dets_year
 
 str(detections)
 ```
 
-## Data formatting
+## Merge data
+
+Now we need to merge these two files to make plotting easier. 
+
+They have the same columns so we could just the base R `rbind()` function, but in case there are differences in the columns in the future, let's use the cleaner `dplyr::bind_rows()` function
+
+```{r}
+
+# Join two years of detection data
+detections_merged <- dplyr::bind_rows(detections$dets_2021,
+                                      detections$dets_2022)
+
+# check new data
+str(detections_merged)
+```
+
+## Data checks
+
+Let's check to make sure the data looks good after merging
+
+### Arrays and sites
+
+Let's check that there are the correct number of levels for array and sites, there should be 6 arrays and 233 sites (155 from 2022-2023 and 78 from 2021-2022)
+
+```{r}
+str(detections_merged)
+
+# check the levels for array and sites
+levels(detections_merged$array)
+levels(detections_merged$site)
+```
+Everything looks good
+
+### NAs
+
+Let's ensure no NAs were introduced where there shouldn't be during the joining process
+
+```{r}
+# check for NAs introduced during data merge
+summary(detections_merged)
+```
+THe only NAs are in the timediff column which is what we expect since any of the first observations won't have a timediff.
+
+
+## Data Formatting
 
 In order to get plots that have the same formatting as last years' report we have to do a bit of data formatting. First we need to make sure we are including the same relevant species (some were ignored for last years' report or grouped together)
 
@@ -136,11 +194,11 @@ Last years report had the following species
 * other 
 * mule deer
 
-And they grouped all humans except for staff as 'Humans'. Let's look at the species we have in this year's data and try to format it the same way
+And they grouped all humans except for staff as 'Humans'. Let's look at the species we have in the combined years of data and try to format it the same way
 
 ```{r det species}
 
-detections %>% 
+detections_merged %>% 
   
   # group by array and species
   group_by(species) %>% 
@@ -149,6 +207,8 @@ detections %>%
   # have R print everything
   print(n = nrow(.))
 ```
+>Hmmm there is one instance of an arctic hare, check that this isn't meant to be a snowshoe hare and fix later if needed. 
+
 
 Now let's create a new data frame (tibble) to work with for the OSM figure summaries specifically
 
@@ -160,10 +220,11 @@ species_drop <- c('Staff',
                   'Unknown ungulate',
                   'Unknown canid',
                   'Unknown mustelid',
-                  'Other birds')
+                  'Other birds',
+                  'Arctic hare')
 
 # now we can create the new data frame with some changes consistent w/ choices made for 2021-2022
-detections <- detections %>% 
+detections_merged <- detections_merged %>% 
   
   # for summarizing, lets lump all the recreational humans into "Humans"
   mutate(species = recode_factor(species, 
@@ -175,7 +236,7 @@ detections <- detections %>%
   filter(!species %in% species_drop)
 
 # look at data
-str(detections)
+str(detections_merged)
 
 ```
 
@@ -183,15 +244,15 @@ str(detections)
 
 We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
 
-Let's see how this shit goes... probably bad but who knows
+I'm not great at writing loops, so let's see how this shit goes... probably bad but who knows
 ```{r det subset forloop }
 
 array_frames <- list()
 
-for (i in unique(detections$array)){
+for (i in unique(detections_merged$array)){
   
    #Subset data based on radius
-  df <- detections %>%
+  df <- detections_merged %>%
     filter(array == i)
   
  # list of dataframes
@@ -201,7 +262,7 @@ for (i in unique(detections$array)){
 }
 
 # inspect one data frame
-print(array_frames[[1]]) # this is for LU01
+print(array_frames[[1]]) # this is for LU2
 ```
 ... I think this worked
 
@@ -211,13 +272,15 @@ Now let's change names of list items using purrr, couldn't figure out how to nam
 ```{r name array frames}
 array_frames <- array_frames %>%
 
-  purrr::set_names('LU01',
+  purrr::set_names('LU02',
+                   'LU03',
+                   'LU01',
                    'LU13',
                    'LU15',
-                   'LU21') # 
+                   'LU21') 
 
 # inspect each data frame
-print(array_frames$LU01)
+head(array_frames$LU01)
 ```
 
 
@@ -250,12 +313,15 @@ detection_data <- array_frames %>%
       distinct()) %>% 
   
   # set names of list objects
-  purrr::set_names('Detections LU01',
+  purrr::set_names('Detections LU02',
+                   'Detections LU03',
+                   'Detections LU01',
                    'Detections LU13',
                    'Detections LU15',
                    'Detections LU21')
 
 ```
+
 
 ## Detection plots
 
@@ -320,7 +386,7 @@ We can save all the plots from the purrr iteration above using `purrr::imap`. im
 purrr::imap(
   detection_plots,
   ~ggsave(.x,
-             file = paste0("figures/",
+             file = paste0("figures/OSM_",
                            .y,
                            '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
           dpi = 600,
@@ -368,7 +434,9 @@ occupancy_data <- array_frames %>%
     # keep only unique (distinct) rows so we should be left with one row per species, this helps with plotting
   distinct()) %>% 
   
-  purrr::set_names('Naive Occupancy LU01',
+  purrr::set_names('Naive Occupancy LU02',
+                   'Naive Occupancy LU03',
+                   'Naive Occupancy LU01',
                    'Naive Occupancy LU13',
                    'Naive Occupancy LU15',
                    'Naive Occupancy LU21')
@@ -431,7 +499,7 @@ Again avoid using the .tiff extension in github
 purrr::imap(
   occupancy_plots,
   ~ggsave(.x,
-          file = paste0("figures/",
+          file = paste0("figures/OSM_",
                         .y,
                         '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
           dpi = 600,
@@ -445,26 +513,48 @@ purrr::imap(
 
 The previous year's report had a figure for each LU with the detections plot on the top and the occupancy plot on the bottom so we will recreate these for this year using `ggarrange()`.
 
-Unfortunately I could not figure out how to do this in purrr to reduce coding but luckily it isn't too much repitition
+Unfortunately I could not figure out how to do this in purrr to reduce coding but luckily it isn't too much repetition
+
 
 ```{r combine plots}
 
 # not sure I know how to do the following section in purrr just yet, but we've saved a ton of coding so far and it doesn't take much to arrange each of these individually
 
-# LU1
-
-# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
-LU1_det_occ_plots <- ggarrange(detection_plots$`Detections LU01`, occupancy_plots$`Naive Occupancy LU01`,
+# LU2
+LU02_det_occ_plots <- ggarrange(detection_plots$`Detections LU02`, 
+                               occupancy_plots$`Naive Occupancy LU02`,
                                labels = c("A", "B"),
                                nrow = 2)
 
 # view plot
-LU1_det_occ_plots
+LU02_det_occ_plots
+
+
+# LU3
+LU03_det_occ_plots <- ggarrange(detection_plots$`Detections LU03`, 
+                               occupancy_plots$`Naive Occupancy LU03`,
+                               labels = c("A", "B"),
+                               nrow = 2)
+
+# view plot
+LU03_det_occ_plots
+
+# LU1
+
+# arrange the plots so each LU has a figure with detections on top and naive occ on bottom
+LU01_det_occ_plots <- ggarrange(detection_plots$`Detections LU01`, 
+                               occupancy_plots$`Naive Occupancy LU01`,
+                               labels = c("A", "B"),
+                               nrow = 2)
+
+# view plot
+LU01_det_occ_plots
 
 # LU13
 
 # arrange the plots so each LU has a figure with detections on top and naive occ on bottom
-LU13_det_occ_plots <- ggarrange(detection_plots$`Detections LU13`, occupancy_plots$`Naive Occupancy LU13`,
+LU13_det_occ_plots <- ggarrange(detection_plots$`Detections LU13`, 
+                                occupancy_plots$`Naive Occupancy LU13`,
                                labels = c("A", "B"),
                                nrow = 2)
 
@@ -475,7 +565,8 @@ LU13_det_occ_plots
 # LU15
 
 # arrange the plots so each LU has a figure with detections on top and naive occ on bottom
-LU15_det_occ_plots <- ggarrange(detection_plots$`Detections LU15`, occupancy_plots$`Naive Occupancy LU15`,
+LU15_det_occ_plots <- ggarrange(detection_plots$`Detections LU15`, 
+                                occupancy_plots$`Naive Occupancy LU15`,
                                 labels = c("A", "B"),
                                 nrow = 2)
 
@@ -486,7 +577,8 @@ LU15_det_occ_plots
 # LU21
 
 # arrange the plots so each LU has a figure with detections on top and naive occ on bottom
-LU21_det_occ_plots <- ggarrange(detection_plots$`Detections LU21`, occupancy_plots$`Naive Occupancy LU21`,
+LU21_det_occ_plots <- ggarrange(detection_plots$`Detections LU21`, 
+                                occupancy_plots$`Naive Occupancy LU21`,
                                 labels = c("A", "B"),
                                 nrow = 2)
 
@@ -500,20 +592,24 @@ We can however, save all the figures again using purrr
 ```{r save combine plots, eval=FALSE}
 
 # save all figures at once using purrr
-final_det_occ_plots <- list(LU1_det_occ_plots,
+final_det_occ_plots <- list(LU02_det_occ_plots,
+                            LU03_det_occ_plots,
+                            LU01_det_occ_plots,
                             LU13_det_occ_plots,
                             LU15_det_occ_plots,
                             LU21_det_occ_plots) %>% 
   
 
-  purrr::set_names('LU01_det_occ_plots',
+  purrr::set_names('LU02_det_occ_plots',
+                   'LU03_det_occ_plots',
+                   'LU01_det_occ_plots',
                    'LU13_det_occ_plots',
                    'LU15_det_occ_plots',
                    'LU21_det_occ_plots') %>% 
   
   purrr::imap(
     ~ggsave(.x,
-            file = paste0("figures/",
+            file = paste0("figures/OSM_",
                           .y,
                           '.jpg'), # avoid using .tiff extension in the github repo, those files are too large to push to origin
             dpi = 600,
@@ -523,13 +619,45 @@ final_det_occ_plots <- list(LU1_det_occ_plots,
 
 ```
 
+## Finish with detection data
+
+Before proceeding let's clear the objects currently in our environment since we don't need them for the analysis
+
+```{r clear env}
+rm(list = ls(all.names = TRUE))
+```
+
 # Analysis prep
 
-## Read in data
+Now we can start the analysis prep.
+
+First we need to read in the proportional detection (response metrics) and covariate (explanatory metrics) data files for all 6 LUs (fiscal years 2021-2022 and 2022-2023)
+
+
+## Response metrics
+
+### Read in data files
+
+We haven't joined the response metrics from 2021-2022 and 2022-2023 in any previous scripts yet, so let's read those in using *purrr* and then join them and take a look at the data to make sure it looks good. 
 
 ```{r}
 # response metric (proportional detections from the from the ACME_camera_script_9-2-2024.R or .Rmd)
-prop_detections <- read_csv('data/processed/OSM_2022_proportional_detections.csv')
+
+prop_detections <-  file.path('data/processed',
+                         
+                         c('OSM_proportional_detections_2021.csv',
+                           'OSM_proportional_detections_2022.csv')) %>% 
+  
+  map(~.x %>%
+        read_csv(.,
+                 
+                  # set the column types to read in correctly
+                 col_types = cols(site = col_factor(),
+                                  .default = col_number()))) %>% 
+  
+  # give names to each data frame in list
+  purrr::set_names('prop_dets_2021',
+                   'prop_dets_2022') # R doesn't like when they are just numbers, you can make it work but it's annoying to call the data frame later so I've called them prop_dets_year
 
 # check variable structure
 str(prop_detections)
@@ -537,69 +665,150 @@ str(prop_detections)
 
 ```
 
-```{r}
-# Couldn't get this to work in purrr yet so using a loop to subset the data, create the plots, and save them all in one section... NEAT
+### Merge data files 
 
+Now we need to merge the two data files for analysis. We can do this with *dplyr*.
+
+```{r merge prop dets}
+
+# merge the proportional detections files so there are rows for both fiscal years
+prop_dets_all <- dplyr::bind_rows(prop_detections$prop_dets_2021,
+                                  prop_detections$prop_dets_2022)
+
+print(prop_dets_all)
+```
+
+### Format data
+
+This looks good except since there were no wolverines in the first fiscal year of monitoring (LU02 and LU03) those columns have NAs for both arrays, we want to replace those NAs with Zeros and move the wolverine column to the correct location
+
+Let's do that now.
+
+```{r format prop dets all}
+
+prop_dets_all <- prop_dets_all %>% 
+  
+   # replace NAs introduced from joining data to zeros
+  replace(is.na(.),
+          0) %>% 
+  
+  # relocate wolverine column
+  relocate(.,
+           wolverine,
+           .after = caribou)
+
+# check data
+head(prop_dets_all)
+
+```
+Looks good!
+
+
+## Covariates
+
+In the previous script, 2_ACME_landscape_covariate_exploration_script.Rmd we joined the two fiscal years of data and grouped the covariates for analysis and saved this data as a c.sv file, so we can read in this file now and we shouldn't have to do any further formatting at the moment
+
+### Read data
+
+We will check the data structure after reading in the file just to make sure everything looks good.
+```{r read covs}
+
+covariates_all <- read_csv('data/processed/OSM_covariates_grouped_2021_2022.csv',
+                           
+                           # set the column types to read in correctly
+                           col_types = cols(array = col_factor(),
+                                            camera = col_factor(),
+                                            site = col_factor(),
+                                            buff_dist = col_factor(),
+                                            .default = col_number()))
+
+str(covariates_all)
+
+```
+Everything looks good!
+
+###Subset data by buffer
+
+We need to subset the data so we have separate data frames for each buffer width to work with in the analysis **AND** to explore correlation between variables at each buffer width, as these may very with spatial scales
+
+Let's use a for loop to subset the data
+```{r subset data}
 buffer_frames <- list()
 
-for (i in unique(covariates_grouped$buff_dist)){
+for (i in unique(covariates_all$buff_dist)){
   
   print(i)
   
-  #Subset data based on radius
-  df<-covariates_grouped %>%
+  # Subset data based on radius
+  df <- covariates_all %>%
     filter(buff_dist == i)
   
-  #rename dataframe on the fly
-  assign(paste("df", i, sep ="_"), df)
-  
-  #list of dataframes
+  # list of dataframes
   buffer_frames <-c (buffer_frames, list(df))
-  
-  #Subset data based on radius
-  df<-covariates_grouped %>%
-    filter(buff_dist == i) %>%
-    select(where(is.numeric))
-  
- #compute a correlation matrix (watch for errors)
- matrix <- cor(df)
- 
- # print and save the correlation plot on the go
- # renaming for each buffer as we do
- png(file.path("figures/", paste("correlation_", i, ".png")))
- corrplot::corrplot(matrix,
-                    type = 'upper',
-                    tl.col = 'black',
-                    title = paste0('Variable correlation plot at ', i))
- dev.off()
-  
 }
+
+# name list objects so we can extract names for plotting 
+
+buffer_frames <- buffer_frames %>% 
+  
+  # absurdly long way to do this but for sake of time fuck it
+  purrr::set_names('250 meter buffer',
+                   '500 meter buffer',
+                   '750 meter buffer',
+                   '1000 meter buffer',
+                   '1250 meter buffer',
+                   '1500 meter buffer',
+                   '1750 meter buffer',
+                   '2000 meter buffer',
+                   '2250 meter buffer',
+                   '2500 meter buffer',
+                   '2750 meter buffer',
+                   '3000 meter buffer',
+                   '3250 meter buffer',
+                   '3500 meter buffer',
+                   '3750 meter buffer',
+                   '4000 meter buffer',
+                   '4250 meter buffer',
+                   '4500 meter buffer',
+                   '4750 meter buffer',
+                   '5000 meter buffer')
 ```
 
+Now we have a list with data frames for each buffer width which we can work with later. 
 
-## Add response metric
+### Add response metric
 
 Now that we have the covariate data formatted we need to add the response metric (monthly proportional presence/absence) to the data frames
 
 ```{r response metric}
 
-final_osm_2023_df <- buffer_frames %>% 
+osm_final_df_2021_2022 <- buffer_frames %>% 
   
   purrr::map(
     ~.x %>% 
       
-      left_join(prop_detections,
+      left_join(prop_dets_all,
                 by = 'site'))
 ```
 
+### Finish with data formatting
+
+Let's remove the objects we no longer need from the environment to keep our workspace clean
+
+```{r rm data}
+rm(covariates_all,
+   prop_detections,
+   df,
+   i)
+```
 
 # Analysis
 
-Now we are going to run a global model which includes all HFI and LC variables that at first glance (will do a more thorough check later) seem to have enough data to include as covariates for each buffer width, and then we will compare these models see which buffer width best fit the data  for each species.
+Now we are going to run a global model which includes all HFI and LC variables that at first glance (will do a more thorough check later) seem to have enough data to include as covariates for each buffer width, and then we will compare these models see which buffer width best fit the data  for each species. After that we will optimize models so they don't includes any variables that are highly correlated.
 
 We don't need to do ALL the species since many don't have enough data.
 
-> Refer to the ACME_camera_script_9-2-2024.html or .Rmd the plot for proportional monthly detections should provide info on which species we have enough data for, can be found under Response metrics/3.Proportion monthly detections
+> Refer to the 1_ACME_camera_script_9-2-2024.html or .Rmd the plot for proportional monthly detections should provide info on which species we have enough data for, can be found under Response metrics/3.Proportion monthly detections
 
 A brief look at this fig indicates that we have enough for all the mammals in the prop_detections data frame **except**
 
@@ -610,15 +819,10 @@ A brief look at this fig indicates that we have enough for all the mammals in th
 
 ## Black bear 
 
-## ANDREW/MARISSA FIX later??
-
-> there is probably a way to shorten the following code to select particular species, I saw Andrew's for loop in the draft script he wrote but couldn't quite figure out how to adapt it to my purposes with the data formatted the way I have it, so I did this instead, maybe we can merge approaches later to clean this up?
+> there is probably a way to shorten the following code to select particular species, I saw Andrew's for loop in the draft script he wrote but couldn't quite figure out how to adapt it to my purposes with the data formatted the way I have it, so I did this instead, maybe we can merge approaches later to clean this up if deemed necessary? But it certainly functions for now and is understandable... I think. 
 
 
-### Global model
-
-### Marissa SCALE MODELS
-> actually don't need to since all variables are proportions already right?
+### Global models
 
 Let's start with bears and use purrr to create a global model for every buffer distance
 
@@ -626,7 +830,7 @@ Recall `purrr::map()` is magical for iterations and will apply all the functions
 ```{r black bear global model}
 
 # create models for black bears at each buffer size
-black_bear_mods <- final_osm_2023_df %>%
+black_bear_mods <- osm_final_df_2021_2022 %>%
 
   # use purrr map to fun the same functions for all buffer sizes ((all objects in list))
   purrr::map(
@@ -635,29 +839,25 @@ black_bear_mods <- final_osm_2023_df %>%
       # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
      glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
                         
-                        # HFI covariates in alphabetical order
-                        scale(borrowpits) +
-                        scale(pipeline) +
-                        scale(clearings) +
+                        # HFI
                         scale(harvest) +
-                        scale(facilities) +
-                        scale(mines) +
+                        scale(pipeline) +
                         scale(roads) +
                         scale(seismic_lines) +
-                        scale(transmission_lines) +
+                        scale(seismic_lines_3D) +
                         scale(trails) +
-                         scale(veg_edges) +
+                        scale(transmission_lines) +
+                        scale(veg_edges) +
                         scale(wells) +
+                        scale(osm_industrial) +
                         
                         # VEG covariates in numerical order
-                        scale(lc_class110) +
-                        scale(lc_class20) +
-                        scale(lc_class210) +
-                        scale(lc_class220) +
-                        scale(lc_class230) +
-                        scale(lc_class33) +
-                        scale(lc_class34) +
-                        scale(lc_class50) +
+                        scale(lc_grassland) +
+                        scale(lc_coniferous) +
+                        scale(lc_broadleaf) +
+                        scale(lc_mixed) +
+                        scale(lc_developed) +
+                        scale(lc_shrub) +
                         
                         # Random effect of array
                         (1|array),
@@ -666,51 +866,228 @@ black_bear_mods <- final_osm_2023_df %>%
 
 
 ```
-> Lots of notes about model convergence problems. Likely because there are too many variables in model and some without enough variation in data to reliably calculate and estime. We should revisit the data and thin it out a bit more
 
-### Model selection
+
+#### Model selection
 
 We will use the `model.sel()` function from the *MuMIn* package to compare the global models for each buffer width and see which buffer fits the black bear data best
+
 ```{r black bear mod selection}
 
 model.sel(black_bear_mods)
 
 ```
 
-> hmmmm seems fishy to me that the 250 meter buffer which is the only one that had missing data would perform THAT much better than all the others, and really you shouldn't compare models if they aren't run on the same data, hence the warning message
+Looks like the smallest buffer (250) fits the data best for black bears.
 
-Let's remove the 250 buffer and see what happens. To do this we can use the `discard_at()` function in the *purr* package which will remove a list element based on it's name (e.g. '250 meter buffer').
+Let's look at this model closer
 
-After that we will rerun the model selection again and see if it looks better
-```{r remove 250 buffer}
+#### Model summary
 
-black_bear_mods_no250 <- black_bear_mods  %>% 
+```{r black bear 250 summary}
+
+summary(black_bear_mods$`250 meter buffer`)
+```
+Nothing looks fishy in the model summary for now, we will look at this more closely once we have a true top model.
+
+### Subset models
+
+#### Autocorrelation 250m
+
+Before we can develop model subsets we need to see what variables can be included in the same model at this buffer width.
+
+Let's use the `chart.Correlation()` function in the *Performance Analytics* package to look at this.
+
+```{r cor 250, warning=FALSE}
+
+buffer_frames$`250 meter buffer` %>% 
   
-  # purrr::discard_at will remove an item from a list
-  purrr::discard_at('250 meter buffer')
+  select_if(is.numeric) %>% 
+  
+   # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
 
+mtext('250 meter buffer', side = 3, line = 3)
+  
+```
+List of correlated variables:   
 
-# run model selection again
-model.sel(black_bear_mods_no250)
+* pipeline & transmission_lines 0.53    
+* roads & veg_edges 0.71
+* roads & lc_developed 0.57
+
+#### Model list
+
+> Jake/Andrew can you suggest some additional subset models if needed 
+
+Let's create another global model without these correlated variables. I'm going to select transmission_lines over pipeline because the summary from earlier showed transmission lines had larger effect on black bear presence, and I'm going to choose to keep roads.
+
+```{r black bear mods 250}
+
+# global model w/ non-correlated variables
+bear_global_250 <-  glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
+                        
+                        # HFI
+                        scale(harvest) +
+                        scale(roads) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(transmission_lines) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        
+                        # VEG covariates in numerical order
+                        scale(lc_grassland) +
+                        scale(lc_coniferous) +
+                        scale(lc_broadleaf) +
+                        scale(lc_mixed) +
+                        scale(lc_shrub) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = osm_final_df_2021_2022$`250 meter buffer`,
+                   family = 'binomial')
+
+# null model to compare
+bear_null_250 <- glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~ 1 +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = osm_final_df_2021_2022$`250 meter buffer`,
+                   family = 'binomial')
+
+# second model is based on linear features providing easier movement through boreal forest
+bear_linear_250 <- glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
+                        
+                        # HFI
+                        scale(roads) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = osm_final_df_2021_2022$`250 meter buffer`,
+                   family = 'binomial')
 ```
 
-> this looks much more realistic; the 500 m buffer is top model for black bears
 
-So what we will do for each species is remove the 250 meter buffer for now since there are some data missing, and compare just the other buffer sizes that contain the full data set
+#### Model selection
 
+ Now let's look at a model selection table with our subset models.
+ 
+```{r black bear mod selection 2}
 
-### Model summary 500m
+model.sel(bear_global_250,
+          bear_null_250,
+          bear_linear_250)
 
-Let's take a look at the model summary for the top model
-
-```{r black bear 500 summary}
-
-summary(black_bear_mods_no250$`500 meter buffer`)
 ```
 
+Looks like the linear feature model is best, SO FAR
+
+###  Top model
+
+* 250 meter buffer
+
+#### Summary
+
+```{r bear summary}
+
+summary(bear_linear_250)
+```
+
+#### Odds ratios
+
+Let's extract the odds ratios for the top model so we can plot them for data vis later.
+
+
+```{r bear odds ratios}
+bear_model_odds <- bear_linear_250 %>% 
+
+  # extract the coefficients and upper and lower CI
+      confint() %>% 
+ 
+      # format resulting object as a tibble data frame
+      as_tibble() %>%
+  
+      
+      # add a column where we can put the feature names
+      rowid_to_column() %>% 
+      
+      # rename the columns for plotting
+      rename('lower' = `2.5 %`,
+             'upper' = `97.5 %`,
+             'estimate' = Estimate,
+             'feature' = rowid) %>% 
+      
+      # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
+      mutate(feature = as.factor(feature),
+             feature = recode(feature,
+                              '1' = 'intercept',
+                              '2' = 'roads',
+                              '3' = 'seismic_lines',
+                              '4' = 'seismic_lines_3D',
+                              '5' = 'trails',
+                              '6' = 'transmission_lines',
+                              '7' = 'intercept_array')) %>% 
+  
+  # remove intercepts
+  filter(!grepl('intercept',
+                feature))
+```
+
+#### Plot odds ratios
+
+First let's get a silhouette for this graphy from phylopic
+
+```{r bear phylopic}
+
+black_bear_img <- get_phylopic(get_uuid(name = 'Ursus americanus'))
+```
+
+
+Now let's use ggplot to plot the odds ratios for each feature in the top model
+
+```{r plot bear odds}
+
+# provide data and mapping aesthetics
+ggplot(bear_model_odds, aes(x = feature, 
+                          y = estimate)) +
+  
+   geom_errorbar(aes(ymin = lower, 
+                     ymax = upper),
+                width = 0.4,
+                linewidth = 0.5,
+                position = position_dodge(width = 0.9)) +
+  
+   geom_hline(yintercept = 0, linetype = "dashed") +
+  
+  labs(y = 'Odds ratio') +
+  
+  scale_x_discrete(labels = c('Roads',
+                              'Seismic Lines',
+                              '3D Seismic Lines',
+                              'Trails',
+                              'Transmission Lines')) +
+  
+  add_phylopic(black_bear_img, 
+               x = 5.3,
+               y = 0.2,
+               ysize = 0.05) +
+  
+  theme_classic() +
+  
+  theme(axis.title.x = element_blank(),
+        axis.title = element_text(size = 16),
+        axis.text = element_text(size = 14))
+```
 
 Let's repeat this process for each species that we have enough data for.
-
 
 ## Caribou
 
@@ -721,7 +1098,7 @@ We can use the same code from black bears (above) to run global models for each 
 And in the same chunk to save time let's also run the `model.sel()` function
 
 ### Models/Model selection
-```{r caribou mods}
+```{r caribou mods, eval=FALSE}
 
 caribou_mods_no250 <- final_osm_2023_df %>%
   
@@ -771,7 +1148,7 @@ We get a warning that there are some model convergence problems, I expect this i
 ### Model summary 3500m
 
 Let's take a closer look at the top model summary
-```{r caribou 3500 summary}
+```{r caribou 3500 summary, eval=FALSE}
 
 summary(caribou_mods_no250$`3500 meter buffer`)
 ```

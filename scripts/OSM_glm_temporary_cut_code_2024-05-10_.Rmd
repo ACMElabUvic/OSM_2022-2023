@@ -1,0 +1,202 @@
+---
+title: "Untitled"
+author: "Marissa Dyck"
+date: "2024-05-08"
+output: html_document
+---
+
+
+
+# Autocorellation
+
+```{r}
+# Couldn't get this to work in purrr yet so using a loop to subset the data, create the plots, and save them all in one section... NEAT
+
+buffer_frames <- list()
+
+for (i in unique(covariates_grouped$buff_dist)){
+  
+  print(i)
+  
+  #Subset data based on radius
+  df<-covariates_grouped %>%
+    filter(buff_dist == i)
+  
+  #rename dataframe on the fly
+  assign(paste("df", i, sep ="_"), df)
+  
+  #list of dataframes
+  buffer_frames <-c (buffer_frames, list(df))
+  
+  #Subset data based on radius
+  df<-covariates_grouped %>%
+    filter(buff_dist == i) %>%
+    select(where(is.numeric))
+  
+ #compute a correlation matrix (watch for errors)
+ matrix <- cor(df)
+ 
+ # print and save the correlation plot on the go
+ # renaming for each buffer as we do
+ png(file.path("figures/", paste("correlation_", i, ".png")))
+ corrplot::corrplot(matrix,
+                    type = 'upper',
+                    tl.col = 'black',
+                    title = paste0('Variable correlation plot at ', i))
+ dev.off()
+  
+}
+```
+
+## Correlation plots
+
+Now we need to make correlation plots for each buffer width to see what variables are correlated at a given spatial scale. We can use `purrr::map()` with the `chart.Correlation()` function from the *PerformanceAnalytics* package to make correlation plots with a specified method (e.g., pearson, spearman, etc.) That also show histograms and scatterplots of each variable.
+
+```{r correlation plots pearson, warning=FALSE}
+
+correlation_plots <- buffer_frames %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      # select numeric variables only since we can't compute a r2 for non-numeric
+      select_if(is.numeric) %>% 
+      
+      # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+  )
+```
+
+Although we are able to plot all of the histograms at once, with so many buffers and without an easy way to add titles to all of these plots in purrr it's hard to keep track of everything. So instead, I;ve added a section for each buffer width, with the correlation plot and outlining the variables that are autocorrelated and thus should not be included in the same model, it includes the r2 as well
+
+## 250m
+
+```{r cor 250, warning=FALSE}
+
+buffer_frames$`250 meter buffer` %>% 
+  
+  select_if(is.numeric) %>% 
+  
+   # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+
+mtext('250 meter buffer', side = 3, line = 3)
+  
+```
+
+* pipeline & transmission_lines 0.53    
+* roads & veg_edges 0.71
+* roads & lc_developed 0.57
+
+## 500m
+
+```{r cor 500, warning=FALSE}
+
+buffer_frames$`500 meter buffer` %>% 
+  
+  select_if(is.numeric) %>% 
+  
+   # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+
+mtext('500 meter buffer', side = 3, line = 3)
+  
+```
+
+* harvest &  lc_mixed 
+* pipeline & transmission_lines 0.64  
+* pipeline & roads 0.59   
+* pipeline & veg edges 0.57   
+* pipeline & wells 0.75   
+* pipeline & lc_grassland 0.62    
+* roads & veg edges 0.79    
+* roads & wells 0.75    
+* roads & lc_developed 0.75      
+* roads & osm_industrial 0.72   
+* veg edges & wells 0.61    
+* veg edges & lc_developed 0.88      
+* wells & lc_grassland 0.61       
+* wells & lc_developed 0.67      
+* coniferous & broadleaf -0.77    
+
+
+## 750m
+
+```{r cor 750, warning=FALSE}
+
+buffer_frames$`750 meter buffer` %>% 
+  
+  select_if(is.numeric) %>% 
+  
+   # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+
+mtext('750 meter buffer', side = 3, line = 3)
+  
+```
+
+* pipeline & transmission_lines 0.70       
+* roads & veg_edges 0.74    
+* roads & lc_developed 0.64    
+* transmission_lines & lc_developed 0.51    
+
+
+
+
+
+
+
+Now let's do the same thing with the landcover variables
+
+```{r lc histograms, eval=FALSE}
+
+lc_histograms <- buffer_frames %>% 
+  
+  purrr::imap(
+    ~.x %>% 
+      
+      # filter to just the landcover variables 
+      select(where(is.numeric) &
+          starts_with('lc_class')) %>% 
+      
+      # pipe into hist.data.frame function to make histograms for each variable
+      hist.data.frame(mtitl = paste0('Histograms of landcover variables at ', .y)))
+```
+
+
+Let's remove the 250 buffer and see what happens. To do this we can use the `discard_at()` function in the *purr* package which will remove a list element based on it's name (e.g. '250 meter buffer').
+
+After that we will rerun the model selection again and see if it looks better
+```{r remove 250 buffer}
+
+black_bear_mods_no250 <- black_bear_mods  %>% 
+  
+  # purrr::discard_at will remove an item from a list
+  purrr::discard_at('250 meter buffer')
+
+
+# run model selection again
+model.sel(black_bear_mods_no250)
+```
+
+> this looks much more realistic; the 500 m buffer is top model for black bears
+
+So what we will do for each species is remove the 250 meter buffer for now since there are some data missing, and compare just the other buffer sizes that contain the full data set
+
+
+### Model summary 500m
+
+Let's take a look at the model summary for the top model
+
+```{r black bear 500 summary}
+
+summary(black_bear_mods_no250$`500 meter buffer`)
+```

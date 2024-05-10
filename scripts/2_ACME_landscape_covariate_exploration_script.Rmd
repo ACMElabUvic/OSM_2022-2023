@@ -428,7 +428,7 @@ So let's modify this data and remove those features for now **this step will nee
 Let's also rename the landcover classes so they make more sense without having to look them up by number (*maybe should add this to script earlier for next year*)
 ```{r covs remove features}
 
-covariates_grouped <- covariates_grouped %>% 
+covariates_grouped_final <- covariates_grouped %>% 
   
   # create column osm_industrial
   mutate(
@@ -456,12 +456,12 @@ covariates_grouped <- covariates_grouped %>%
   
   # rename landcover classes
   rename(
-    grassland = lc_class110,
-    coniferous = lc_class210,
-    broadleaf = lc_class220,
-    mixed = lc_class230,
-    developed = lc_class34,
-    shrub = lc_class50) 
+    lc_grassland = lc_class110,
+    lc_coniferous = lc_class210,
+    lc_broadleaf = lc_class220,
+    lc_mixed = lc_class230,
+    lc_developed = lc_class34,
+    lc_shrub = lc_class50) 
 
 # check that it worked
 names(covariates_grouped)
@@ -473,7 +473,7 @@ Let's save this data now that it's all formatted and grouped.
 
 ```{r save grouped data}
 
-write_csv(covariates_grouped,
+write_csv(covariates_grouped_final,
           'data/processed/OSM_covariates_grouped_2021_2022.csv')
 ```
 
@@ -484,191 +484,9 @@ Let's remove the data frames we no longer need.
 
 ```{r rm messy data 2}
 
-rm(covariates_fixed)
+rm(covariates_fixed,
+   covariates_grouped)
 ```
 
+>We are done with this script for now, we have a nice clean data set with the HFI covariates grouped how we could use them in an analysis and the VEG covariates renamed so we don't have to memorize or lookup what the numbers mean
 
-
-# Data exploration 
-
-## Subset data by buffer
-
-We need to subset the data so we have separate data frames for each buffer width to work with in the analysis **AND** to explore correlation between variables at each buffer width, as these may very with spatial scales
-
-Let's use a for loop to subset the data
-```{r subset data}
-buffer_frames <- list()
-
-for (i in unique(covariates_grouped$buff_dist)){
-  
-  print(i)
-  
-  # Subset data based on radius
-  df <- covariates_grouped %>%
-    filter(buff_dist == i)
-  
-  # list of dataframes
-  buffer_frames <-c (buffer_frames, list(df))
-}
-
-# name list objects so we can extract names for plotting 
-
-buffer_frames <- buffer_frames %>% 
-  
-  # absurdly long way to do this but for sake of time fuck it
-  purrr::set_names('250 meter buffer',
-                   '500 meter buffer',
-                   '750 meter buffer',
-                   '1000 meter buffer',
-                   '1250 meter buffer',
-                   '1500 meter buffer',
-                   '1750 meter buffer',
-                   '2000 meter buffer',
-                   '2250 meter buffer',
-                   '2500 meter buffer',
-                   '2750 meter buffer',
-                   '3000 meter buffer',
-                   '3250 meter buffer',
-                   '3500 meter buffer',
-                   '3750 meter buffer',
-                   '4000 meter buffer',
-                   '4250 meter buffer',
-                   '4500 meter buffer',
-                   '4750 meter buffer',
-                   '5000 meter buffer')
-```
-
-Now we have a list with data frames for each buffer width which we can work with later. 
-
-> We will need to repeat this step in the analysis script
-
-
-# Autocorellation
-
-## Correlation plots
-
-Now we need to make correlation plots for each buffer width to see what variables are correlated at a given spatial scale. We can use `purrr::map()` with the `chart.Correlation()` function from the *PerformanceAnalytics* package to make correlation plots with a specified method (e.g., pearson, spearman, etc.) That also show histograms and scatterplots of each variable.
-
-```{r correlation plots pearson, warning=FALSE}
-
-correlation_plots <- buffer_frames %>% 
-  
-  purrr::map(
-    ~.x %>% 
-      
-      # select numeric variables only since we can't compute a r2 for non-numeric
-      select_if(is.numeric) %>% 
-      
-      # use chart.correlation 
-      chart.Correlation(.,
-                        histogram = TRUE, 
-                        method = "pearson")
-  )
-```
-
-
-There is a section for each buffer width outlining the variables that are autocorrelated and thus should not be included in the same model, it includes the r2 as well
-
-## 250m
-
-```{r cor 250, warning=FALSE}
-
-buffer_frames$`250 meter buffer` %>% 
-  
-  select_if(is.numeric) %>% 
-  
-   # use chart.correlation 
-      chart.Correlation(.,
-                        histogram = TRUE, 
-                        method = "pearson")
-
-mtext('250 meter buffer', side = 3, line = 3)
-  
-```
-
-* pipeline & transmission_lines 0.53    
-* roads & veg_edges 0.71
-* roads & lc_developed 0.57
-
-## 500m
-
-```{r cor 500, warning=FALSE}
-
-buffer_frames$`500 meter buffer` %>% 
-  
-  select_if(is.numeric) %>% 
-  
-   # use chart.correlation 
-      chart.Correlation(.,
-                        histogram = TRUE, 
-                        method = "pearson")
-
-mtext('500 meter buffer', side = 3, line = 3)
-  
-```
-
-* harvest &  lc_mixed 
-* pipeline & transmission_lines 0.64  
-* pipeline & roads 0.59   
-* pipeline & veg edges 0.57   
-* pipeline & wells 0.75   
-* pipeline & lc_grassland 0.62    
-* roads & veg edges 0.79    
-* roads & wells 0.75    
-* roads & lc_developed 0.75      
-* roads & osm_industrial 0.72   
-* veg edges & wells 0.61    
-* veg edges & lc_developed 0.88      
-* wells & lc_grassland 0.61       
-* wells & lc_developed 0.67      
-* coniferous & broadleaf -0.77    
-
-
-## 750m
-
-
-
-
-## Exploratory plots
-
-> add more to this section in later when we have more time to explore the covariates and choose which should be inlcuded etc.
-
-```{r hfi histograms, eval=FALSE}
-
-# use this code to change figure margins otherwise will not plot because figure margines are too large
-par(mar=c(1,1,1,1))
-
-# now use purrr to plot histograms for all remaining HFI variables for each buffer
-hfi_histograms <- buffer_frames %>% 
-  
-  purrr::imap(
-    ~.x %>% 
-      
-      # filter to just the HFI variables 
-      select(where(is.numeric) &
-          ! starts_with('lc_class')) %>% 
-      
-      # pipe into hist.data.frame function to make histograms for each variable
-      hist.data.frame(mtitl = paste0('Histograms of HFI variables at ', .y)))
-
-
-```
-
-
-
-Now let's do the same thing with the landcover variables
-
-```{r lc histograms, eval=FALSE}
-
-lc_histograms <- buffer_frames %>% 
-  
-  purrr::imap(
-    ~.x %>% 
-      
-      # filter to just the landcover variables 
-      select(where(is.numeric) &
-          starts_with('lc_class')) %>% 
-      
-      # pipe into hist.data.frame function to make histograms for each variable
-      hist.data.frame(mtitl = paste0('Histograms of landcover variables at ', .y)))
-```

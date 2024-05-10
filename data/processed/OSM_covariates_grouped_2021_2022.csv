@@ -1,4 +1,4 @@
-array,site,buff_dist,harvest,pipeline,roads,seismic_lines,seismic_lines_3D,trails,transmission_lines,veg_edges,wells,grassland,coniferous,broadleaf,mixed,developed,shrub,osm_industrial
+array,site,buff_dist,harvest,pipeline,roads,seismic_lines,seismic_lines_3D,trails,transmission_lines,veg_edges,wells,lc_grassland,lc_coniferous,lc_broadleaf,lc_mixed,lc_developed,lc_shrub,osm_industrial
 LU13,LU13_18,250,0,0,0,0,0,0.005879016000000002,0.06421027200000003,0,0,0.1928166,0.4555943770000001,0,0,0,0.3155169260000001,0.3828720790000001
 LU13,LU13_15,250,0,0.067955759,0.017425857000000006,0.032770789,0,0.002800676,0,0.08579617700000006,0,0.34823323999999983,0.3583255190000001,0,0.100603367,0.091599197,0,0.156983308
 LU13,LU13_03,250,0.687019855,0,0,0,0,0,0,0,0,0,0.185976544,0,0.255262006,0,0.5587614500000002,0
