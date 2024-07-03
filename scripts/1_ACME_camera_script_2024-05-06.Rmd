@@ -62,18 +62,19 @@ University of Victoria
 School of Environmental Studies     
 Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)     
 
-## Netdrive access
-
-This script relys on the user having access to the ACME lab Netdrive (you can view the .html output of this file if you don't have access and just want to see what the script did).
-
-Helpful instructions for connecting to and navigating the Netdrive can also be found here: [https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit ](https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit).
-
 
 ## Netdrive access
 
 This script relies on the user having access to the ACME lab Netdrive (you can view the .html output of this file if you don't have access and just want to see what the script did).
 
 Helpful instructions for connecting to and navigating the Netdrive can also be found here: [https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit ](https://docs.google.com/document/d/1Z72IrlIXO8MUHCoVztcMrMdL10R2tHrHThEgfow1Cu0/edit).
+
+
+## R and RStudio
+
+Before starting you should ensure you have the latest version of R and RStudio downloaded. This code was generated under R version 4.2.3 and with RStudio version 2024.04.2+764.    
+
+You can download R and RStudio [HERE](https://posit.co/download/rstudio-desktop/)   
 
 
 ## R markdown
@@ -108,7 +109,7 @@ library('withr') # used to temporarily set wd
 
 # Deployment data
 
-Let's start by importing the deployment data so we know how many cameras there are, info on the site names and arrays that were used for 2022-2023. We will use this data to compare with the other data failes (e.g. timelapse, covariates, etc.) to ensure those were entered correctly
+Let's start by importing the deployment data so we know how many cameras there are, info on the site names and arrays that were used for 2022-2023. We will use this data to compare with the other data files (e.g. timelapse, covariates, etc.) to ensure those were entered correctly
 
 ## Import deployment data
 

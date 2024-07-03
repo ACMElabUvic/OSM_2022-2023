@@ -1828,9 +1828,9 @@ Using the code from above with the fixed images let's plot it again
 
 ```{r plot buffers again}
 
-ggplot(buffer_data,
-       aes( x = species,
-            y = buffer_width)) +
+buffer_plot <- ggplot(buffer_data,
+                      aes( x = species,
+                           y = buffer_width)) +
   
   # add points as phylopic silhouettes
   geom_phylopic(aes(uuid = image),
@@ -1850,10 +1850,92 @@ ggplot(buffer_data,
   
   # set theme
   theme_bw() +
-  theme(panel.grid.minor = element_blank())
+  theme(panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+buffer_plot 
 ```
 
 BEAUTIFUL!!! If I do say so myself
+
+### Save plot
+
+```{r save buffer plot}
+
+ggsave('figures/OSM_species_buffers_2022.jpeg',
+       buffer_plot,
+       width = 18,
+       height = 12,
+       units = 'in',
+       dpi = 600)
+```
+
+
+## Body size plot
+
+Now I want to see if their are trends between body size and which bfuffer distance performed best. I'll first need to add a body size column to the data.
+
+### Mutate data
+
+To do this I'm going to google the avergae body size of each species and then add it as a column using mutate
+
+> ** IMPORTANT - this is just for data visualization purposes!. Since we don't actually have data on body size of the individuals in our study I can't run any analysis on this but I can use it to visualize if there appears to be any trends worth investigating.
+
+```{r}
+
+# first add body size to buffer data
+body_size_data <- buffer_data %>% 
+  
+  # use mutate to create new column
+  mutate(body_size = case_when(species == 'Black bear' ~ 181,
+                               species == 'Caribou' ~ 355,
+                               species == 'Coyote' ~ 15,
+                               species == 'Fisher' ~ 3.5,
+                               species == 'Grey wolf' ~ 39,
+                               species == 'Lynx' ~ 11,
+                               species == 'Moose' ~ 555,
+                               species == 'Red fox' ~ 5.2,
+                               species == 'White-tailed deer' ~ 200),
+         log_body_size = log(body_size))
+```
+
+### Plot
+
+Now let's plot this as a scatterplot
+
+```{r}
+
+body_size_plot <- ggplot(body_size_data, aes(x = log_body_size,
+                                             y = buffer_width)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(uuid = image),
+                size = 400) +
+  
+  labs(x = 'Log body size (kg)',
+       y = 'Buffer width (meters)') +
+  
+  # set theme
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+body_size_plot
+```
+
+### Save plot
+
+```{r}
+ggsave('figures/OSM_body_size_buffers_2022.jpg',
+       body_size_plot,
+       width = 18,
+       height = 12,
+       units = 'in',
+       dpi = 600)
+```
+
 
 ## Odds ratio plots
 
