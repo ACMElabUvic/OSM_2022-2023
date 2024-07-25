@@ -443,12 +443,22 @@ str(OSM_2022_data)
 ```
 The variables all look like the uploaded with the correct format
 
+### Data summary
+
+This is a good way to look at all the data and notice if there are any glaring issues/outliers. etc. for all of the columns
+
+```{r timelapse data summary}
+
+summary(OSM_2022_data)
+```
+> From this if you notice any issues explore them more closely in the code chunks below
+
 
 ### Column names
 
 We can use the `names()` function to check that all the column names are correct and match with other year's of OSM data
 
-```{r}
+```{r timelapse column names}
 
 names(OSM_2022_data)
 ```
@@ -458,6 +468,19 @@ Because there are slight differences in the number/order of columns between file
 We also need to add a month and year column for future data processing steps, we can extract these columns from the datetime column in the data formatting below
 
 Lastly we need an array column which we can extract from the site column
+
+
+### Dates
+
+The minimum date in the summary data showed 1979 which is obviously incorrect. Let's see how many entries have a wrong date by filtering for years prior to 2022
+
+```{r timelapse date}
+
+OSM_2022_data %>% 
+  
+  filter(year(datetime) <2022 )
+```
+Luckily it appears that only 2 images have a year before 2022 and they are both staff images so we can probably safely remove these and it won't mess with any analyses.
 
 
 ### Sites
@@ -530,7 +553,6 @@ OSM_2022_data %>%
 
 It looks like there was one entry with an NA for the site column but it wasn't associated with an image of an animal so there's really no need to fix it or remove it at this point.
 
-
 ## Data manipulation 
 
 The following code will fix any data issues we found in the data check steps. This code will need to be modified each year as well as year-specific and R version specific issues arise but this provides a good starting point.
@@ -558,6 +580,9 @@ OSM_2022_data_fixed <- OSM_2022_data %>%
   select(!c(...37,
             dark,
             ...38)) %>% 
+  
+  # filter out the two entries with years before 2022
+  filter(year(datetime) >= 2022) %>% 
   
   # fix issues with site column 
   mutate(

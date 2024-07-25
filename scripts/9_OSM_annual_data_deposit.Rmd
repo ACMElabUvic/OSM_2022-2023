@@ -1,0 +1,302 @@
+---
+title: "OSM Annual Data Deposit Script"
+author: "Marissa Dyck"
+date: "2024-07-17"
+output: 
+  html_document:
+    theme: journal
+    toc: yes
+    toc_float: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+# Before you begin
+
+## Notes
+
+A few notes about this script.
+
+If you are running this with the 2022-2023 data make sure you download the whole (OSM_2022-2023 GitHub repository)[https://github.com/ACMElabUvic/OSM_2022-2023] from the ACMElabUvic GitHub. This will ensure you have all the files, data, and proper folder structure you will need to run this code and associated analyses.
+
+Also make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data. 
+
+If you have question please email the most recent author, currently   
+
+Marissa A. Dyck   
+Postdoctoral research fellow    
+University of Victoria    
+School of Environmental Studies     
+Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)     
+
+## R and RStudio
+
+Before starting you should ensure you have the latest version of R and RStudio downloaded. This code was generated under R version 4.2.3 and with RStudio version 2024.04.2+764.    
+
+You can download R and RStudio [HERE](https://posit.co/download/rstudio-desktop/)   
+
+
+## R markdown
+
+This script is written in R markdown and thus uses a mix of coding markup languages and R. If you are planning to run this script with new data or make any modifications you will want to be familiar with some basics of R markdown.
+
+Below is an R markdown cheatsheet to help you get started,    
+[R markdown cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)    
+
+
+## Install packages
+
+If you don't already have the following packages installed, use the code below to install them.
+
+```{r install packages, eval=FALSE}
+
+install.packages(tidyverse) # for data formatting, visualization, and more
+
+```
+
+## Load libraries
+
+Then load the packages to your library.
+
+```{r libraries}
+
+library('tidyverse') # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
+
+```
+
+# Data formatting
+
+In 2024 we received a request from OSM for all past and current data to be sent to them for assessment purposes. They requested a different format than the raw data are stored/submitted to OSM in the past and the dataverse deposit. This script serves as a guideline to format multiple years and LUs of data into the required format outlined below.
+
+* All years and LUs combined in one .csv    
+* Site location data included with camera (species) data    
+* Submitted directly to them not uploaded to dataverse for public download    
+
+## Camera and site data
+
+All LUs for each year are already combined in the first script in this sequence (1_ACME_camera_script_...) so we can upload that data for multiple years now. 
+
+### Import camera data
+
+We will merge them in the import step using `map_dfr()` since the files have the same column names, but you could also import indivually with purr or not and then merge them using rbind or another function
+
+```{r import camera data}
+
+# import OSM timelapse files from 2021 and 2022
+timelapse <- 
+  
+  # provide file path (e.g. folders to find the data)
+  file.path('data/processed',
+            
+            # provide the file names
+            c('OSM_timelapse_2021.csv',
+              'OSM_timelapse_2022.csv')) %>%
+  
+  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
+  map_dfr(~.x %>% 
+        read_csv(.) %>% 
+          
+          # set certain variables that read in as character to factor *may need to alter this each year
+          mutate(array = as.factor(array),
+                 site = as.factor(site),
+                 snow = as.factor(snow),
+                 species = as.factor(species)))
+```
+
+> Data checks and cleaning were already complted for these files in in the first script in this sequence (1_ACME_camera_script_...) so we don't need to do that again here. I recommend just doing a quick check of the data using `str()` and `summary()` in the console to make sure everything read in properly.
+
+### Import site data
+
+Now we need to repeat what we did above with the site data that has lat/lon coordinates for both years so we can eventually merge these files and get one with species and site info.
+
+This data has not been checked and cleaned since we did not use if for the report/analysis yet. Therefore we might run into some issues we need to address in this section. 
+
+```{r import site data}
+
+# import OSM timelapse files from 2021 and 2022
+sites <- 
+  
+  # provide file path (e.g. folders to find the data)
+  file.path('data/raw',
+            
+            # provide the file names
+            c('OSM_Deployment_Site_Data_2021.csv',
+              'OSM_Deployment_Site_Data_2022.csv')) %>%
+  
+  # use purrr map to read in files, the ~.x is a placeholder that refers to the object before the last pipe (aka the list of data we are reading in) so all functions inside the map() after ~.x will be performed on all the objects in the list we provided
+  map_dfr(~.x %>% 
+        read_csv(.,
+                 
+                 #specify how we want the columns read in 
+                    col_types = cols('Deploy Date' = col_date(
+                      format = "%d-%b-%y"),
+                      'Deploy Time' = col_time(),
+                      Lat = col_number(),
+                      Long = col_number(),
+                      'Camera Site Description' = col_character(),
+                      'Grade (%)' = col_integer(),
+                      'Elevation (m)' = col_integer(),
+                      'Distance to Trail (m)' = col_number(),
+                      'Distance to Lure' = col_number(),
+                      'Comments and Access Notes' = col_character(),
+                      .default = col_factor())) %>% 
+          
+  # set the column names to lower case and replace the '.' with '_' (these are both personal preferences of mine)
+  set_names(
+    names(.) %>% 
+      tolower()))
+```
+> You will get warning about parsing issues becomes the files don't have the exact same columns. This is okay it will fill with NAs 
+
+### Site data checks
+
+Let's do some checks on this data since it wasn't cleaned before to make sure nothing is horribly wanky. We are simply submitting this for review to OSM not using for analysis so we don't need to be super critical here
+
+```{r site data checks}
+
+str(sites)
+summary(sites)
+
+```
+
+Generally speaking things merged relatively well. There are a few columns with entries of both 'NA' and 'not recorded' which I would probably clean up if we were using that data for an analysis but for the purposes of this data deposit I think it looks good.
+
+
+We do need to change a few column names so that they match the timelapse file. We can do that with the `rename()` function. I will also fix some that are just problematic for R in general (e.g. spaces, special characters, etc.) in case this data is used later.
+
+```{r rename sites}
+# first print names to compare with timelapse file
+names(sites)
+
+# now fix names
+sites <-  sites %>% 
+  
+  # rename columns
+  rename(deploy_date = 'deploy date',
+         deploy_time = 'deploy time',
+         grid_cell = 'grid cell #',
+         site = 'camera site #',
+         camera_unit = 'camera unit #',
+         sd = 'sd card #',
+         gps_label = 'gps label',
+         site_description = 'camera site description',
+         grade = 'grade (%)',
+         elevation = 'elevation (m)',
+        dist_trail = 'distance to trail (m)',
+        camera_direction = 'camera direction',
+        trail_rating = 'trail use rating',
+        dist_lure = 'distance to lure',
+        site_comments = 'comments and access notes',
+        forest = 'forest type') %>% 
+  
+  # fix array entries to match timelapse data
+  mutate(array = str_remove(array, 
+                            pattern = "OSM_"))
+  
+```
+
+
+The main thing we do need to check is that the site entries match up between this data frame and the timelapse file. We can do this with a nifty function `setdiff()` which will compare the levels of two data frames and print out which sites are in the first data frame and not the second. To get the reverse printout you need to switch the order
+
+```{r tiemlapse sites}
+
+# check which sites are in timelapse data that are not in sites
+setdiff(levels(timelapse$site),
+        levels(sites$site))
+
+# and switch the order to check if there are extras in sites compared to timelapse
+setdiff(levels(sites$site),
+        levels(timelapse$site))
+
+```
+Okay so we need to fix how site LU15_44 was entered in the sites data. Site LU3_106 is okay because the camera was cut down so the SD card was not retrieved hence the missing data.
+
+```{r fix LU15_44}
+
+sites <- sites %>% 
+  
+  mutate(site = recode(site,
+                        `LU15-44` = 'LU15_44'))
+
+```
+
+> Now if you go up and re-run the first `setdiff()` function for the data frames above you should get a printout of "character(0)" instead of LU15_44.
+
+
+### Merge timelapse and site data
+
+Now we want to merge the timelapse and site data files so that the OSM people can see the site coordinates and species info in the same file.
+
+```{r merge timelapse and site}
+
+camera_data <- timelapse %>% 
+  
+  full_join(sites, 
+            by = c('site',
+                   'array'))
+```
+
+Let's check this data too, to ensure everything worked as expected. I would open the data file from the Global Environment as well as running the code below.
+
+```{r check camera data}
+
+summary(camera_data)
+```
+### Save camera data
+
+Save so we can send to OSM
+
+```{r save camera data}
+
+write_csv(camera_data,
+          'data_deposit/OSM_camera_data_2021-2022.csv')
+```
+
+
+## Covariate site data
+
+Now we need to do a similar thing for the covariates and the site data. Hopefully this will be simpler since both have already been cleaned.
+
+### Import covaraites
+
+Luckily from previous scripts combined we have already generated a covariate file that contains both HFI, and VEG data joined for both years. Let's import this now
+
+```{r import covaraites}
+ covariates <- read_csv('data/processed/OSM_covariates_grouped_2021_2022.csv')
+```
+
+### Join covariates and site data
+
+Hopefully this is simple and easy. The covariates file should already have site names that match with the timelapse data, and we already ensured the sites data also matched the timelapse data. So hopefully now we can just use an full_join to combine them by the site column
+
+```{r join covs and sites}
+
+landscape_data <- covariates %>% 
+  
+  full_join(sites,
+            by = c('site',
+                   'array'))
+```
+
+Praise jesus that was simpler!
+
+> Take a look at the data from the Global Environment to be sure it joined properly. 
+
+Looks good. Let's save it
+
+### Save covaraite + site data
+
+```{r save covaraite + site data}
+
+write_csv(landscape_data,
+          'data_deposit/OSM_landscape_data_2021-2022.csv')
+```
+
+
+
+Hopefully this will suffice for the OSM data submission. 
