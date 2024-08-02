@@ -240,6 +240,7 @@ str(detections_merged)
 
 ```
 
+
 ## Subset data
 
 We will also want to subset the data by landscape unit (LU) and generate a new data frame for each LU to use for plotting
@@ -702,6 +703,17 @@ head(prop_dets_all)
 
 ```
 Looks good!
+
+### Save data
+
+Let's save the merged and formatted detection data from 2021 and 2022 for future use
+
+```{r save joined det data}
+
+write_csv(prop_dets_all,
+          'data/processed/OSM_proportional_detections_merged_2021_2022.csv')
+```
+
 
 
 ## Covariates
