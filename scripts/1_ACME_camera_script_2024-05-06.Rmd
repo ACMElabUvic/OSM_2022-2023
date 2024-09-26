@@ -87,7 +87,7 @@ Below is an R markdown cheatsheet to help you get started,
 
 ## Install packages
 
-If you don't already have the following packages installed, use the code below to install them.
+If you don't already have the following packages installed, use the code below to install them. *NOTE this will not run automatically as eval=FALSE is included in the chunk setup (i.e. I don't want it to run every time I run this code since I have the packages installed)
 
 ```{r install packages, eval=FALSE}
 

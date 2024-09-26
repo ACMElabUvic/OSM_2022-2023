@@ -58,9 +58,25 @@ Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)
 
 (*update/add authors as needed*)
 
+
+## R and RStudio
+
+Before starting you should ensure you have the latest version of R and RStudio downloaded. This code was generated under R version 4.2.3 and with RStudio version 2024.04.2+764.    
+
+You can download R and RStudio [HERE](https://posit.co/download/rstudio-desktop/)   
+
+
+## R markdown
+
+This script is written in R markdown and thus uses a mix of coding markup languages and R. If you are planning to run this script with new data or make any modifications you will want to be familiar with some basics of R markdown.
+
+Below is an R markdown cheatsheet to help you get started,    
+[R markdown cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)    
+
+
 ## Install packages
 
-If you don't already have the following packages installed, use the code below to install them.
+If you don't already have the following packages installed, use the code below to install them. *NOTE this will not run automatically as eval=FALSE is included in the chunk setup (i.e. I don't want it to run every time I run this code since I have the packages installed)
 
 ```{r install packages, eval=FALSE}
 
@@ -77,7 +93,7 @@ install.packages('broom')
 
 ## Load libraries
 
-Then load the packages to your library.
+Then load the packages to your library so they are usable for this session.
 
 ```{r libraries, message=FALSE}
 
@@ -628,7 +644,7 @@ Before proceeding let's clear the objects currently in our environment since we 
 rm(list = ls(all.names = TRUE))
 ```
 
-# Analysis prep
+# Global Analysis prep
 
 Now we can start the analysis prep.
 
@@ -718,7 +734,7 @@ write_csv(prop_dets_all,
 
 ## Covariates
 
-In the previous script, 2_ACME_landscape_covariate_exploration_script.Rmd we joined the two fiscal years of data and grouped the covariates for analysis and saved this data as a c.sv file, so we can read in this file now and we shouldn't have to do any further formatting at the moment
+In the previous script, 2_ACME_landscape_covariate_exploration_script.Rmd we joined the two fiscal years of data and grouped the covariates for analysis and saved this data as a csv file, so we can read in this file now and we shouldn't have to do any further formatting at the moment
 
 ### Read data
 
@@ -741,9 +757,9 @@ Everything looks good!
 
 ###Subset data by buffer
 
-We need to subset the data so we have separate data frames for each buffer width to work with in the analysis **AND** to explore correlation between variables at each buffer width, as these may very with spatial scales
+We do need to subset the data so we have separate data frames for each buffer width to work with in the analysis **AND** to explore correlations between variables at each buffer width, as these may very with spatial scales
 
-Let's use a for loop to subset the data
+Let's use a for loop to subset the data, thanks Andrew!
 ```{r subset data}
 buffer_frames <- list()
 
@@ -805,7 +821,7 @@ osm_final_df_2021_2022 <- buffer_frames %>%
 
 ### Finish with data formatting
 
-Let's remove the objects we no longer need from the environment to keep our workspace clean
+Let's remove the objects we no longer need from the environment to keep our work space clean
 
 ```{r rm data}
 rm(covariates_all,
@@ -814,7 +830,7 @@ rm(covariates_all,
    i)
 ```
 
-# Analysis
+# Global Analysis
 
 Now we are going to run a global model which includes all HFI and LC variables that at first glance (will do a more thorough check later) seem to have enough data to include as covariates for each buffer width, and then we will compare these models see which buffer width best fit the data  for each species. After that we will optimize models so they don't includes any variables that are highly correlated.
 
@@ -949,6 +965,9 @@ black_bear_mods_no250 <- osm_final_df_2021_2022 %>%
 
 
 ### Subset models
+
+> NOTE this code was not used for publication but was an initial idea for how we could further use the data. We only explored subset models for Bears thus far, but have left the headings for the other species in case we want to add in these subset models later
+
 
 #### Autocorrelation 250m
 
@@ -1665,7 +1684,8 @@ Add later if deemed necessary
 
 ### Top model
 
-# Top buffers
+
+## Top buffers
 
 For convenience here is a list of the top buffer widths for each species
 
@@ -1681,14 +1701,14 @@ For convenience here is a list of the top buffer widths for each species
 
 
 
-# Plots for all species
+## Plots for all species
 
 
-## Buffer size
+### Buffer size
 
 What I want to do here is create a figure that plots a point for each species at the buffer size that was in the top model.
 
-### Data frame
+#### Data frame
 
 Before we can do this I need to make a data frame that include the species, top buffer width, and any other info I may want in the plot.
 
@@ -1735,7 +1755,7 @@ buffer_data <- tibble(
 )
 ```
 
-### Plot
+#### Plot
 
 ```{r plot buffers}
 
@@ -1754,7 +1774,7 @@ ggplot(buffer_data,
 This looks alright but I don't love all the default phylopic images that are used. 
 
 
-### Fix phylopics 
+#### Fix phylopics 
 
 We can go to the [Phylopic website](https://www.phylopic.org/) and check out other options and then use the code below to search for the uuid from those options for the ones we want to replace
 
@@ -1834,7 +1854,7 @@ buffer_data <- tibble(
 )
 ```
 
-### Plot again
+#### Plot again
 
 Using the code from above with the fixed images let's plot it again
 
@@ -1871,7 +1891,7 @@ buffer_plot
 
 BEAUTIFUL!!! If I do say so myself
 
-### Save plot
+#### Save plot
 
 ```{r save buffer plot}
 
@@ -1884,11 +1904,11 @@ ggsave('figures/OSM_species_buffers_2022.jpeg',
 ```
 
 
-## Body size plot
+### Body size plot
 
 Now I want to see if their are trends between body size and which bfuffer distance performed best. I'll first need to add a body size column to the data.
 
-### Mutate data
+#### Mutate data
 
 To do this I'm going to google the avergae body size of each species and then add it as a column using mutate
 
@@ -1912,7 +1932,7 @@ body_size_data <- buffer_data %>%
          log_body_size = log(body_size))
 ```
 
-### Plot
+#### Plot
 
 Now let's plot this as a scatterplot
 
@@ -1937,7 +1957,7 @@ body_size_plot <- ggplot(body_size_data, aes(x = log_body_size,
 body_size_plot
 ```
 
-### Save plot
+#### Save plot
 
 ```{r}
 ggsave('figures/OSM_body_size_buffers_2022.jpg',
@@ -1949,12 +1969,12 @@ ggsave('figures/OSM_body_size_buffers_2022.jpg',
 ```
 
 
-## Odds ratio plots
+### Odds ratio plots
 
 What we need to do now is extract the coefficient estimates from each top model, as well as the 95% CI so we can plot them for easier visualization and understanding of the data
 
 
-### Extract odds ratios
+#### Extract odds ratios
 
 The `confint()` function will extract the coefficients and CI intervals from a model, so what we need to do is make a list of all the models, then use the `map()` function in *purrr* to apply the `confint()` function to all the models and get the coefficients. We want this to result in a tibble that has a column for the HFI feature (we aren't plotting the lc_class data for this report), the upper and lower CI, and the coefficient estimate.
 
@@ -2026,7 +2046,7 @@ top_models <- list(black_bear_mods$`250 meter buffer`,
                    'White-tailed deer')
 ```
 
-### Merge data frames
+#### Merge data frames
 
 Now we have a data frame with the odds ratios for each species, but if we want these on a plot together we need them all in one data frame. 
 
@@ -2060,11 +2080,11 @@ coeffs_df_all <- list_rbind(top_models,
   
 ```
 
-### Plot odds all species
+#### Plot odds all species
 
 Now let's explore some different options to plot the coefficients
 
-#### geom_phylopic
+##### geom_phylopic
 
 Let's try plotting all the species on one plot using `ggplot()`
 ```{r plot odds all}
@@ -2149,7 +2169,7 @@ ggplot(coeffs_df_all, aes(x = feature,
 
 Unfortunately they still don't center on the lines like they should so will try a different plot
 
-#### Facet_wrap
+##### Facet_wrap
 
 ```{r plot all odds facet_wrap}
 
@@ -2177,11 +2197,11 @@ ggplot(coeffs_df_all,
         axis.ticks.x = element_blank())
 ```
 
-#### Plot_model
+##### Plot_model
 
 If all else fails can use [plot_model function](https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_model_estimates.html)
 
-##### Example with black bear model
+###### Example with black bear model
 
 ```{r plot_model}
 
@@ -2190,4 +2210,399 @@ library(sjPlot)
 plot_model(black_bear_mods$`250 meter buffer`,
            vline.color = 'black')
 ```
+
+# Subset Analysis Prep
+
+## Summary
+
+While the global models are interesting and yield relevant results there is an issue of addressing autocorrelation with such large models that we don't have the capacity to address at each spatial scale while still keeping the models the same so the only thing being compared is the buffer size. 
+
+It's also relevant to wonder if these results would be different depending on if we look at exclusively disturbance or landscape features in a model and by reducing the variables in each model we can address this issue of autocorrelation much easier. So the next analysis will repeat what we've done above for each species but instead of using one global model for everything we will divide the data into disturbance and landscape covariates and run two separate models per species and see if the results differ. 
+
+## Data prep
+
+First let's subset the data into the two new groups we will use for this analysis so we can check for auto correlations within the data sets
+
+### Developed
+
+First let's generate the developed data set which includes only the covariates for the human factors indices
+```{r subset developed data}
+
+osm_developed_df_2021_2022 <- osm_final_df_2021_2022 %>% 
+  
+  # use purr to apply following data manipulation steps to all the buffer data frames
+  purrr::map(
+    
+    ~.x %>% 
+      
+      # de-select columns for landscape data (e.g. those that have the prefix 'lc_')
+      select(!starts_with('lc_'))
+  )
+```
+
+
+
+Now let's explore the correlations between variables at each buffer scale and see what features we may need to remove or group together (if appropriate)
+
+### Correlation plots
+
+Now we need to make correlation plots for each buffer width to see what variables are correlated at a given spatial scale. We can use `purrr::map()` with the `chart.Correlation()` function from the *PerformanceAnalytics* package to make correlation plots with a specified method (e.g., pearson, spearman, etc.) That also show histograms and scatterplots of each variable.
+
+
+Let's do this for the developed data first
+
+```{r correlation plots developed pearson, warning=FALSE}
+
+correlation_plots <- osm_developed_df_2021_2022 %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      # select only columns with covaraites not other info
+      select(harvest:osm_industrial) %>% 
+      
+      # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+  )
+```
+This creates a lot of plots (1 for each buffer size) and I haven't found a way to label them by the buffer size yet unfortunately. But hopefully there will be trends among the buffer sizes to simplify the process of choosing covariates
+
+> in Rstudio you can click on the white square icon in the upper right-hand corner of the figures to open a new window with the plots so you can see the values easier
+
+In order of buffer size I'm going to summarize covariates that are correlated below with their respective r2 values. I'm only listing correlations above 0.6 for each buffer size
+
+* 250m
+roads + veg edges 0.71
+*this is to be expected as veg edges occur along the sides of roads (primarily) as well as other disturbance features. We will choose roads in the analysis over veg edges*       
+
+* 500m
+pipeline + transmission lines   0.63    
+*we may be able to combine these*
+roads + veg edges 0.73
+
+* 750m    
+pipeline + transmission lines 0.70    
+roads + veg edges 0.74    
+
+* 1000m   
+pipeline + transmission lines 0.73    
+roads + veg edges 0.79    
+
+* 1250m   
+pipeline + transmission lines 0.72    
+roads + veg edges 0.81    
+
+* 1500m   
+pipeline + transmission lines 0.72    
+roads + veg edges 0.84    
+roads + wells 0.64    
+
+* 1750m
+pipeline + transmission lines 0.72    
+roads + veg edges 0.85    
+roads + wells 0.70    
+
+* 2000m   
+pipeline + transmission lines 0.72    
+roads + veg edges 0.86    
+roads + wells 0.73    
+
+* 2250m   
+pipeline + transmission lines 0.71    
+roads + veg edges 0.87    
+roads + wells 0.76    
+
+* 2500m   
+pipleine + roads 0.61   
+pipeline + transmission lines 0.70    
+roads + veg edges 0.88    
+roads + wells 0.76    
+roads + osm_industrial 0.61   
+
+* 2750m   
+pipeline + roads 0.61   
+pipeline + transmission lines 0.70    
+roads + veg edges 0.88    
+roads + wells 0.76    
+roads + osm_industrial 0.61   
+
+* 3000m   
+pipeline + roads 0.63   
+pipeline + transmission lines 0.69    
+roads + veg edges 0.88    
+roads + wells 0.77    
+roads + osm_industrial 0.63   
+
+> at this point there are some obvious trends between roads and several features and pipelines and transmission lines. for simplicity sake I am only going to report correlations for variables not correlated with roads, as we will have to drop this covariate, and new pairs of highly correlated variables. I will also not specify the buffer size if it's found in more than one buffer 
+
+* 3250m +   
+veg edges + wells 0.61    
+pipeline + wells 0.67    
+pipeline + wells 0.69   
+
+> In summary we should merge pipelines and transmission lines, remove roads, and remove veg edges from the analysis to insure we don't majorly violate assumptions of independence for our models. We will re-assess correlations after making these changes.
+
+
+List of final variables   
+*I first pasted the full list here and then deleted or added combined variables as I went through each buffer's correlation plot*
+
+harvest   
+seismic lines   
+seismic lines 3D    
+trails    
+pipeline and transmission lines    
+wells   
+osm_industrial 
+
+
+#### Reformat data
+
+We'll reformat the developed subset data here and re-run the correlation plots
+
+```{r reformat dev subset data}
+
+osm_developed_df_2021_2022 <- osm_developed_df_2021_2022 %>% 
+  
+  # use purrr 
+  purrr::map(
+    
+    ~.x %>% 
+      
+      # mutate data to combine pipeline and transmission line
+      mutate(pipeline_transmission_lines = (pipeline + transmission_lines)) %>% 
+      
+      # remove correlated variables we won't include in subset models
+      select(! c(pipeline, roads, veg_edges, transmission_lines)) %>% 
+      
+      # relocate column so new covariate is with others
+      relocate(pipeline_transmission_lines,
+               .after = wells)
+  )
+```
+
+#### Re-run correlation plots
+
+Now we should double check that this solves any issues of highly correlated variables by re-running the plots from before
+
+```{r re-run corr plots dev data, warning=FALSE}
+
+correlation_plots <- osm_developed_df_2021_2022 %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+      # select only columns with covariates not other info
+      select(harvest:osm_industrial) %>% 
+      
+      # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+  )
+```
+
+Wells and the new pipelines and transmission lines variable seem to become increasingly correlated as the buffer size increases but the max r squared value is 0.66 so we will leave it in for now and discuss with others about whether or not to remove it since it's on the cusp.
+
+
+### Landcover data
+
+Now let's do the same for the landscape data
+
+```{r subset landscape data}
+
+osm_landscape_df_2021_2022 <- osm_final_df_2021_2022 %>% 
+  
+   # use purr to apply following data manipulation steps to all the buffer data frames
+  purrr::map(
+    
+    ~.x %>% 
+      
+      # de-select columns for developed data 
+      select(!harvest:wells &
+               !osm_industrial)
+  )
+```
+
+Now we will follow the same process with the landscape data for generating correlation plots and assessing whaich variables need to be removed or combined
+
+#### Correlation plots
+
+```{r correlation plot landscape data, warning=FALSE}
+
+correlation_plots <- osm_landscape_df_2021_2022 %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+       # select only columns with covariates not other info
+      select(lc_grassland:lc_shrub) %>% 
+      
+      # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+  )
+```
+
+Below is a summary of the different buffer sizes and correlated variables
+
+* 250m    
+None >0.6   
+
+* 500m
+coniferous + broadleaf 0.63   
+
+* 750m    
+coniferous + broadleaf 0.66   
+
+* 1000m   
+coniferous + braodleaf 0.68   
+
+> Coniferous and broadleaf appear to be the only variables highly correlated so I think what we will do is combine all 3 forest types into one category, because we really aren't interested in interpreting these individual variables but rather seeing if there are differences in which buffer is the best fit between development and landscape features. 
+
+#### Reformat data
+
+```{r reformat landscape data}
+
+osm_landscape_df_2021_2022 <- osm_landscape_df_2021_2022 %>% 
+  
+  # use purrr to apply the functions to all data frames
+  purrr::map(
+    
+    ~.x %>% 
+      
+      # use mutate to combine forest types into one variable
+      mutate(lc_forest = lc_coniferous + lc_broadleaf + lc_mixed) %>% 
+      
+      # remove old variables
+      select(! c(lc_coniferous, lc_broadleaf, lc_mixed)) %>% 
+      
+      # relocate the new column with. the other covariates
+      relocate(lc_forest, 
+               .after = buff_dist)
+  )
+```
+
+Looks good! Now let's re-run the correlation plots 
+
+#### Re-run correlation plots
+
+```{r rerun correlation plot landscape data, warning=FALSE}
+
+correlation_plots <- osm_landscape_df_2021_2022 %>% 
+  
+  purrr::map(
+    ~.x %>% 
+      
+       # select only columns with covariates not other info
+      select(lc_forest:lc_shrub) %>% 
+      
+      # use chart.correlation 
+      chart.Correlation(.,
+                        histogram = TRUE, 
+                        method = "pearson")
+  )
+```
+
+Well crap. Turns out the primary landscape types are forest and shrub so when we combine all three forest types we now have an issue with autocorrelation with the shrub landcover type. Might need to rethink the approach here. 
+
+For now will use one or the other
+
+# Subset Analysis
+
+Now that the two separate data files are ready we can run an analysis with each, similar to what we did with the global models and see if this changes our findings from the global model or if there are differences in results between the two model subsets
+
+## Developed
+
+We will do ana analysis for each species as we did previously.
+
+### Bear
+
+#### Model 
+
+```{r bear dev models}
+
+bear_dev_mods <- osm_developed_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+
+```
+
+
+#### Model selection
+
+We will use the `model.sel()` function from the *MuMIn* package to compare the global models for each buffer width and see which buffer fits the black bear data best
+
+```{r bear dev mod selection}
+
+model.sel(bear_dev_mods)
+
+```
+> This is quite a bit different from the global results which indicated that the 250m buffer was best fit for black bears, whereas this one it is the 4000m buffer
+
+#### Top model summary
+
+```{r bear dev mod summary}
+
+summary(bear_dev_mods$`4000 meter buffer`)
+```
+
+#### Quck test on scaling 
+
+Going to run the models again WITHOUT scaling variables as recent literature suggests this may influence model results. 
+
+```{r test bear dev mod}
+
+test_bear_dev_mods <- osm_developed_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
+                        
+                        # HFI that aren't correlated
+                        harvest +
+                        seismic_lines +
+                        seismic_lines_3D +
+                        trails +
+                        wells +
+                        osm_industrial +
+                        pipeline_transmission_lines +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+
+model.sel(test_bear_dev_mods)
+
+
+```
+> Interesting, you get almost the same results  but the 4000m buffer is the worst fit. There was a warning about model convergence issues> I wonder why that would be?
+
 
