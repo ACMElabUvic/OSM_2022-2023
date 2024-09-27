@@ -2217,18 +2217,18 @@ plot_model(black_bear_mods$`250 meter buffer`,
 
 While the global models are interesting and yield relevant results there is an issue of addressing autocorrelation with such large models that we don't have the capacity to address at each spatial scale while still keeping the models the same so the only thing being compared is the buffer size. 
 
-It's also relevant to wonder if these results would be different depending on if we look at exclusively disturbance or landscape features in a model and by reducing the variables in each model we can address this issue of autocorrelation much easier. So the next analysis will repeat what we've done above for each species but instead of using one global model for everything we will divide the data into disturbance and landscape covariates and run two separate models per species and see if the results differ. 
+It's also relevant to wonder if these results would be different depending on if we look at exclusively anthropogenic or landscape features in a model and by reducing the variables in each model we can address this issue of autocorrelation much easier. So the next analysis will repeat what we've done above for each species but instead of using one global model for everything we will divide the data into disturbance and landscape covariates and run two separate models per species and see if the results differ. 
 
 ## Data prep
 
 First let's subset the data into the two new groups we will use for this analysis so we can check for auto correlations within the data sets
 
-### Developed
+### Anthropogenic
 
 First let's generate the developed data set which includes only the covariates for the human factors indices
 ```{r subset developed data}
 
-osm_developed_df_2021_2022 <- osm_final_df_2021_2022 %>% 
+osm_anthro_df_2021_2022 <- osm_final_df_2021_2022 %>% 
   
   # use purr to apply following data manipulation steps to all the buffer data frames
   purrr::map(
@@ -2249,11 +2249,11 @@ Now let's explore the correlations between variables at each buffer scale and se
 Now we need to make correlation plots for each buffer width to see what variables are correlated at a given spatial scale. We can use `purrr::map()` with the `chart.Correlation()` function from the *PerformanceAnalytics* package to make correlation plots with a specified method (e.g., pearson, spearman, etc.) That also show histograms and scatterplots of each variable.
 
 
-Let's do this for the developed data first
+Let's do this for the anthropogenic data first
 
-```{r correlation plots developed pearson, warning=FALSE}
+```{r correlation plots anthropogenic pearson, warning=FALSE}
 
-correlation_plots <- osm_developed_df_2021_2022 %>% 
+osm_anthro_df_2021_2022 %>% 
   
   purrr::map(
     ~.x %>% 
@@ -2359,11 +2359,11 @@ osm_industrial
 
 #### Reformat data
 
-We'll reformat the developed subset data here and re-run the correlation plots
+We'll reformat the anthropogenicsubset data here and re-run the correlation plots
 
-```{r reformat dev subset data}
+```{r reformat anthro subset data}
 
-osm_developed_df_2021_2022 <- osm_developed_df_2021_2022 %>% 
+osm_anthro_df_2021_2022 <- osm_anthro_df_2021_2022 %>% 
   
   # use purrr 
   purrr::map(
@@ -2386,9 +2386,9 @@ osm_developed_df_2021_2022 <- osm_developed_df_2021_2022 %>%
 
 Now we should double check that this solves any issues of highly correlated variables by re-running the plots from before
 
-```{r re-run corr plots dev data, warning=FALSE}
+```{r re-run corr plots anthro data, warning=FALSE}
 
-correlation_plots <- osm_developed_df_2021_2022 %>% 
+osm_anthro_df_2021_2022 %>% 
   
   purrr::map(
     ~.x %>% 
@@ -2406,7 +2406,7 @@ correlation_plots <- osm_developed_df_2021_2022 %>%
 Wells and the new pipelines and transmission lines variable seem to become increasingly correlated as the buffer size increases but the max r squared value is 0.66 so we will leave it in for now and discuss with others about whether or not to remove it since it's on the cusp.
 
 
-### Landcover data
+### Landscape
 
 Now let's do the same for the landscape data
 
@@ -2431,7 +2431,7 @@ Now we will follow the same process with the landscape data for generating corre
 
 ```{r correlation plot landscape data, warning=FALSE}
 
-correlation_plots <- osm_landscape_df_2021_2022 %>% 
+osm_landscape_df_2021_2022 %>% 
   
   purrr::map(
     ~.x %>% 
@@ -2491,7 +2491,7 @@ Looks good! Now let's re-run the correlation plots
 
 ```{r rerun correlation plot landscape data, warning=FALSE}
 
-correlation_plots <- osm_landscape_df_2021_2022 %>% 
+osm_landscape_df_2021_2022 %>% 
   
   purrr::map(
     ~.x %>% 
@@ -2510,21 +2510,20 @@ Well crap. Turns out the primary landscape types are forest and shrub so when we
 
 For now will use one or the other
 
+
 # Subset Analysis
 
 Now that the two separate data files are ready we can run an analysis with each, similar to what we did with the global models and see if this changes our findings from the global model or if there are differences in results between the two model subsets
 
-## Developed
+## Anthropogenic
 
-We will do ana analysis for each species as we did previously.
+We will do another analysis for each species as we did previously.
 
-### Bear
+### Black bear
 
-#### Model 
+```{r bear anthro models}
 
-```{r bear dev models}
-
-bear_dev_mods <- osm_developed_df_2021_2022 %>% 
+bear_anthro_mods <- osm_anthro_df_2021_2022 %>% 
 
   # use purrr map to run the same functions for all buffer sizes ((all objects in list))
   purrr::map(
@@ -2551,13 +2550,11 @@ bear_dev_mods <- osm_developed_df_2021_2022 %>%
 ```
 
 
-#### Model selection
-
 We will use the `model.sel()` function from the *MuMIn* package to compare the global models for each buffer width and see which buffer fits the black bear data best
 
-```{r bear dev mod selection}
+```{r bear anthro mod selection}
 
-model.sel(bear_dev_mods)
+model.sel(bear_anthro_mods)
 
 ```
 > This is quite a bit different from the global results which indicated that the 250m buffer was best fit for black bears, whereas this one it is the 4000m buffer
@@ -2566,7 +2563,7 @@ model.sel(bear_dev_mods)
 
 ```{r bear dev mod summary}
 
-summary(bear_dev_mods$`4000 meter buffer`)
+summary(bear_anthro_mods$`4000 meter buffer`)
 ```
 
 #### Quck test on scaling 
@@ -2575,7 +2572,7 @@ Going to run the models again WITHOUT scaling variables as recent literature sug
 
 ```{r test bear dev mod}
 
-test_bear_dev_mods <- osm_developed_df_2021_2022 %>% 
+test_bear_anthro_mods <- osm_anthro_df_2021_2022 %>% 
 
   # use purrr map to run the same functions for all buffer sizes ((all objects in list))
   purrr::map(
@@ -2599,10 +2596,84 @@ test_bear_dev_mods <- osm_developed_df_2021_2022 %>%
                    family = 'binomial'))
 
 
-model.sel(test_bear_dev_mods)
+model.sel(test_bear_anthro_mods)
 
 
 ```
-> Interesting, you get almost the same results  but the 4000m buffer is the worst fit. There was a warning about model convergence issues> I wonder why that would be?
+> Interesting, you get almost the same results  but the 4000m buffer is the worst fit. There was a warning about model convergence issues which I suspect is the problem, this is fairly common with unscaled data. We will proceed with scaling the data as is standard practice still, but consider in discussion on ms how this may affect results. 
+
+
+### Caribou 
+
+```{r caribou anthro models}
+
+caribou_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(caribou, absent_caribou) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(caribou_anthro_mods)
+
+```
+Let's look at the summary for the top model
+
+```{r caribou anthro model summary}
+
+summary(caribou_anthro_mods$`1000 meter buffer`)
+```
+
+### Coyote
+
+```{r coyote anthro models}
+
+coyote_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(coyote, absent_coyote) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(coyote_anthro_mods)
+
+```
+
+
+
 
 

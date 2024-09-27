@@ -1218,16 +1218,16 @@ For plotting and formatting proportional monthly detections we need to create a 
                     'Red fox',
                     'White-tailed deer',
                     'Wolverine',
-                    'Snowshoe hare' # this one was added for ES 482/582 class data, we don't normall use for OSM reports
+                    'Snowshoe hare' # this one was added for ES 482/582 class data, we don't normally use for OSM reports
                     )
 ```
 
 
 ## 1. Total independent detections 
 
-The first response metric we will calcualte is the total number of independent detections per speceis per site. 
+The first response metric we will calculate is the total number of independent detections per species per site. 
 
-To do this we use the detections data we created earlier from the raw timelapse data. We need to group by site and species and then we can use the `summarise()` function with the `n()` function to count the total detections 
+To do this we use the detections data we created earlier from the raw Timelapse data. We need to group by site and species and then we can use the `summarise()` function with the `n()` function to count the total detections 
 After that we ungroup the data so if we run an analysis or make a plot it doesn't stay grouped and then we use the `pivot_wider()` function to make a column for each species and a row for each site.
 
 Finally we need to replace any NAs with zeros (the `n()` function function won't insert a zero if there aren't any observations to count so these NAs are indeed zeros)
