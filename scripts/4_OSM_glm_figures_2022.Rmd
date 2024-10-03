@@ -1,0 +1,701 @@
+---
+title: "OSM Figures 2021-2022"
+author: "Marissa Dyck"
+date: "2024-10-03"
+output: 
+  html_document:
+    theme: journal
+    toc: yes
+    toc_float: yes
+---
+
+The first two chunks of this r markdown file after the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+```{css zoom-lib-src, echo = FALSE}
+script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+```
+
+```{js zoom-jquery, echo = FALSE}
+ $(document).ready(function() {
+    $('body').prepend('<div class=\"zoomDiv\"><img src=\"\" class=\"zoomImg\"></div>');
+    // onClick function for all plots (img's)
+    $('img:not(.zoomImg)').click(function() {
+      $('.zoomImg').attr('src', $(this).attr('src')).css({width: '100%'});
+      $('.zoomDiv').css({opacity: '1', width: 'auto', border: '1px solid white', borderRadius: '5px', position: 'fixed', top: '50%', left: '50%', marginRight: '-50%', transform: 'translate(-50%, -50%)', boxShadow: '0px 0px 50px #888888', zIndex: '50', overflow: 'auto', maxHeight: '100%'});
+    });
+    // onClick function for zoomImg
+    $('img.zoomImg').click(function() {
+      $('.zoomDiv').css({opacity: '0', width: '0%'}); 
+    });
+  });
+```
+
+# Before you begin
+
+## Notes
+
+A few notes about this script.
+
+Make sure you open RStudio through the R project (OSM_2022-2023.Rproj) this will automatically set your working directory to the correct place (wherever you saved the repository) and ensure you don't have to change the file paths for some of the data.
+
+If you have question please email the most recent author, currently   
+
+Marissa A. Dyck   
+Postdoctoral research fellow    
+University of Victoria    
+School of Environmental Studies     
+Email: [marissadyck17@gmail.com](marissadyck17@gmail.com)      
+
+(*update/add authors as needed*)
+
+
+## R and RStudio
+
+Before starting you should ensure you have the latest version of R and RStudio downloaded. This code was generated under R version 4.2.3 and with RStudio version 2024.04.2+764.    
+
+You can download R and RStudio [HERE](https://posit.co/download/rstudio-desktop/)   
+
+
+## R markdown
+
+This script is written in R markdown and thus uses a mix of coding markup languages and R. If you are planning to run this script with new data or make any modifications you will want to be familiar with some basics of R markdown.
+
+Below is an R markdown cheatsheet to help you get started,    
+[R markdown cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)    
+
+
+## Install packages
+
+If you don't already have the following packages installed, use the code below to install them. *NOTE this will not run automatically as eval=FALSE is included in the chunk setup (i.e. I don't want it to run every time I run this code since I have the packages installed).
+
+```{r install packages, eval=FALSE}
+
+install.packages('tidyverse') 
+install.packages('ggpubr')
+install.packages('rphylopic')
+install.packages('broom')
+install.packages('grid')
+```
+
+## Load libraries
+
+Then load the packages to your library so they are usable for this session.
+
+```{r libraries, message=FALSE}
+
+library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
+library(ggpubr) # make modifications to plot for publication (arrange plots)
+library(rphylopic) # add animal silhouettes to graphs
+library(broom) # extracting odds ratios in a tidy format
+library(grid)
+```
+# Data
+
+
+Before we can make any figures we need to make a data frame that include the species, top buffer width, and any other info I may want in the plot. I don't know of any easy way to extract this from all the model summaries so I'm just generating it by hand in the code chunk below. 
+
+```{r buffer data}
+
+buffer_data <- tibble(
+  
+  #define number of rows
+  .rows = 9,
+  
+  # create species column
+  species = c('Black bear',
+              'Caribou',
+              'Coyote',
+              'Fisher',
+              'Grey wolf',
+              'Lynx',
+              'Moose',
+              'Red fox',
+              'White-tailed deer'),
+  
+  # create buffer column w/ buffer corresponding to the top model for each species
+  global_buffer_width = c(250, # bear
+                   1000, # caribou
+                   5000, # coyote
+                   1000, # fisher
+                   3500, # wolf
+                   250, # lynx
+                   250, # moose
+                   4750, # fox
+                   1500), # deer
+  
+   # add phylopic uuid for each species for plotting 
+  image = c(get_uuid(name = 'Ursus americanus'),
+           get_uuid(name = 'Rangifer tarandus'),
+           get_uuid(name = 'Canis latrans'),
+           get_uuid(name = 'Pekania pennanti'),
+           get_uuid(name = 'Canis lupus'),
+           get_uuid(name = 'Lynx lynx'),
+           get_uuid(name = 'Alces alces'),
+           get_uuid(name = 'Vulpes vulpes'),
+           get_uuid(name ='Odocoileus virginianus'))
+  
+)
+```
+
+
+# Buffer size
+
+What I want to do here is create a figure that plots a point for each species at the buffer size that was in the top model. I want to use phylopic silhouettes instead of points to make the figure more fun and easier to read quickly.
+
+## Global analysis
+
+I will plot the results for the global analysis first. 
+
+
+### Plot
+
+```{r plot global buffers}
+
+ggplot(buffer_data,
+       aes( x = species,
+            y = global_buffer_width)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(uuid = image),
+                size = 500) +
+  
+  scale_y_continuous(breaks = seq(0, 5000, by = 250)) +
+  
+  coord_cartesian(ylim = c(0, 4900))
+```
+This looks alright but I don't love all the default phylopic images that are used. 
+
+
+### Fix phylopics 
+
+We can go to the [Phylopic website](https://www.phylopic.org/) and check out other options and then use the code below to search for the uuid from those options for the ones we want to replace
+
+Alternatively you can also use the `pick_phylopic()` function to generate a preview of the avaiable silhouettes for each species and interactively select which you want to use. However this feature doesn't work to knit in the rmarkdown html and is a bit slow so I've included the code below with eval = FALSE so it won't run and send an error when I try to knit but is there for future reference.
+
+```{r pick_phylopic, eval=FALSE}
+
+# don't try to run in r markdown, instead copy and paste into console
+?pick_phylopic
+
+pick_phylopic("Ursus americanus", view = 2)
+
+
+
+```
+
+
+I opted to use the website and manually select which silhouette I wanted by getting the uuid for a specific silhouette. I searched the website, found how many options there were, printed the uuid for all of them and then copied the one I wanted from the console into the code below to edit the data. Not the most efficient, but it works for now.  
+```{r search phylopic}
+
+# Caribou could be bigger
+get_uuid(name = 'Rangifer tarandus',
+         n = 6) 
+# I like the 5th one best
+
+# Coyote doesn't need to have a food item
+get_uuid(name = 'Canis latrans',
+         n = 6) 
+# I like the 6th one best
+
+# Grey wolf shouldn't be the same as coyote
+get_uuid(name = 'Canis lupus',
+         n = 5) 
+# I like 2 or 5
+
+# Moose needs a body
+get_uuid(name = 'Alces alces',
+         n = 3) 
+# 3 is best
+
+# red fox is too big
+get_uuid(name = 'Vulpes vulpes',
+         n = 7) 
+# 4 is best
+
+# deer is weird
+get_uuid(name = 'Odocoileus virginianus',
+         n = 6) 
+# 5 is best
+```
+
+Let's alter the code from above to change the phylopic images
+```{r alter phylopic data}
+buffer_data <- tibble(
+  
+  #define number of rows
+  .rows = 9,
+  
+  # create species column
+  species = c('Black bear',
+              'Caribou',
+              'Coyote',
+              'Fisher',
+              'Grey wolf',
+              'Lynx',
+              'Moose',
+              'Red fox',
+              'White-tailed deer'),
+  
+  # create buffer column w/ buffer corresponding to the top model for each species
+  global_buffer_width = c(250, # bear
+                   1000, # caribou
+                   5000, # coyote
+                   1000, # fisher
+                   3500, # wolf
+                   250, # lynx
+                   250, # moose
+                   4750, # fox
+                   1500), # deer
+
+  
+   # add phylopic uuid for each species for plotting 
+  id = c(get_uuid(name = 'Ursus americanus'),
+            'e6e864fd-8e3d-435f-9db3-dc6869c589f1', # caribou 5
+            'e6a2fa4b-85df-43b4-989c-34a65ba7eee3', # coyote 6
+            get_uuid(name = 'Pekania pennanti'),
+            '76c8fdec-d0af-47b9-b949-dc610419d832', # wolf 5
+            get_uuid(name = 'Lynx lynx'),
+            '74eab34a-498c-4614-aece-f02361874f79', # moose 3
+            'd67d3bf6-3509-4ab6-819a-cd409985347e', # red fox 4
+            '6038e80c-398d-47b2-9a69-2b9edf436f64'), # white-tailed deer 6
+  
+  # testing this section for some plots need the actual image not uuid
+  img = c(get_phylopic(uuid = get_uuid(name = 'Ursus americanus')),
+          get_phylopic(uuid = 'e6e864fd-8e3d-435f-9db3-dc6869c589f1'),
+          get_phylopic(uuid = 'e6a2fa4b-85df-43b4-989c-34a65ba7eee3'),
+          get_phylopic(uuid = get_uuid(name = 'Pekania pennanti')),
+          get_phylopic(uuid = '76c8fdec-d0af-47b9-b949-dc610419d832'),
+          get_phylopic(uuid = get_uuid(name = 'Lynx lynx')),
+          get_phylopic(uuid = '74eab34a-498c-4614-aece-f02361874f79'),
+          get_phylopic(uuid = 'd67d3bf6-3509-4ab6-819a-cd409985347e'),
+          get_phylopic(uuid = '6038e80c-398d-47b2-9a69-2b9edf436f64')))
+
+```
+
+### Plot again
+
+Using the code from above with the fixed images let's plot it again
+
+```{r plot buffers again}
+
+global_buffer_plot <- ggplot(buffer_data,
+                             aes( x = species,
+                                  y = global_buffer_width)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(uuid = id),
+                size = 400) +
+  
+  # set axis limits and breaks
+  scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
+  
+  # wrap long species names
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  
+  # set graph limits
+  coord_cartesian(ylim = c(0,4900)) +
+  
+  # make nicer labels
+  labs(y = 'Buffer width (meters)',
+       x = 'Species') +
+  
+  # set theme
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16),
+        plot.margin = margin(15, 20, 15, 25))
+
+global_buffer_plot 
+```
+
+BEAUTIFUL!!! If I do say so myself
+
+### Save plot
+
+```{r save buffer plot}
+
+ggsave('figures/OSM_species_global_buffers_2022.jpeg',
+       global_buffer_plot,
+       width = 18,
+       height = 12,
+       units = 'in',
+       dpi = 600)
+```
+
+
+
+## Anthropogenic analysis
+
+Now I will generate the same plot for the anthropogenic analysis.
+
+### Edit data
+
+First I need to edit the buffer_data to add a column for the anthropogenic model results. 
+
+```{r add anthro data}
+
+buffer_data <- buffer_data %>% 
+  
+  # add column for top buffer size of anthropogenic models
+  mutate(anthro_buffer_width = c(4000,
+                                 1000,
+                                 4750,
+                                 250,
+                                 2000,
+                                 250,
+                                 750,
+                                 1750,
+                                 1500))
+```
+
+
+### Plot
+
+```{r}
+
+anthro_buffer_plot <- ggplot(buffer_data,
+                             aes(x = species,
+                                 y = anthro_buffer_width)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(uuid = id),
+                size = 400) +
+  
+  # set axis limits and breaks
+  scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
+  
+  # wrap long species names
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  
+  # set graph limits
+  coord_cartesian(ylim = c(0,4900)) +
+  
+  # make nicer labels
+  labs(y = 'Buffer width (meters)',
+       x = 'Species') +
+  
+  # set theme
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16),
+        plot.margin = margin(15, 20, 15, 25)
+        )
+
+anthro_buffer_plot 
+```
+
+### Save plot
+
+```{r save anthro buffer plot}
+
+ggsave('figures/OSM_species_anthro_buffers_2022.jpg',
+       anthro_buffer_plot,
+       width = 18,
+       height = 12,
+       units = 'in',
+       dpi = 600)
+
+```
+
+
+## Landscape analysis
+
+Lastly we will make this plot again for the landscape models
+
+### Edit data frame
+
+first we need to add the data to the data frame we generated earlier
+
+```{r add land data}
+
+buffer_data <- buffer_data %>% 
+  
+  # add column for top buffer size of anthropogenic models
+  mutate(landscape_buffer_width = c(250,
+                                    250,
+                                    3750,
+                                    2500,
+                                    3500,
+                                    500,
+                                    250,
+                                    4750,
+                                    4500))
+```
+
+
+### Plot
+
+```{r landscape buffer plot}
+
+land_buffer_plot <- ggplot(buffer_data,
+                             aes(x = species,
+                                 y = landscape_buffer_width)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(uuid = id),
+                size = 400) +
+  
+  # set axis limits and breaks
+  scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
+  
+  # wrap long species names
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  
+  # set graph limits
+  coord_cartesian(ylim = c(0,4900)) +
+  
+  # make nicer labels
+  labs(y = 'Buffer width (meters)',
+       x = 'Species') +
+  
+  # set theme
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16),
+        plot.margin = margin(15, 20, 15, 25)
+        )
+
+land_buffer_plot 
+```
+
+### Save plot
+
+```{r save land buffer plot}
+
+ggsave('figures/OSM_species_land_buffers_2022.jpg',
+       land_buffer_plot,
+        width = 18,
+       height = 12,
+       units = 'in',
+       dpi = 600)
+```
+
+
+
+
+
+
+# Body size plot
+
+Now I want to see if their are trends between body size and which bfuffer distance performed best. I'll first need to add a body size column to the data.
+
+## Global analysis 
+
+### Edit data
+
+To do this I'm going to google the average body size of each species and then add it as a column using mutate
+
+> ** IMPORTANT - this is just for data visualization purposes!. Since we don't actually have data on body size of the individuals in our study I can't run any analysis on this but I can use it to visualize if there appears to be any trends worth investigating.
+
+```{r body size data}
+
+# first add body size to buffer data
+body_size_data <- buffer_data %>% 
+  
+  # use mutate to create new column
+  mutate(body_size = case_when(species == 'Black bear' ~ 181,
+                               species == 'Caribou' ~ 355,
+                               species == 'Coyote' ~ 15,
+                               species == 'Fisher' ~ 3.5,
+                               species == 'Grey wolf' ~ 39,
+                               species == 'Lynx' ~ 11,
+                               species == 'Moose' ~ 555,
+                               species == 'Red fox' ~ 5.2,
+                               species == 'White-tailed deer' ~ 200),
+         log_body_size = log(body_size))
+```
+
+### Plot
+
+Now let's plot this as a scatterplot
+
+```{r}
+
+body_size_plot <- ggplot(body_size_data, aes(x = log_body_size,
+                                             y = global_buffer_width)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(uuid = id),
+                size = 400) +
+  
+  labs(x = 'Log body size (kg)',
+       y = 'Buffer width (meters)') +
+  
+  # set theme
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+body_size_plot
+```
+
+### Save plot
+
+```{r save body size plot}
+ggsave('figures/OSM_body_size_buffers_2022.jpg',
+       body_size_plot,
+       width = 18,
+       height = 12,
+       units = 'in',
+       dpi = 600)
+```
+
+
+
+
+# Final figures for manuscript
+
+In this section I will join and tidy up some of the plots to make nice final figures for the manuscript
+
+## Figure 1
+
+Figure 1 is a map of the study area which is not generated in this script
+
+## Figure 2
+
+Figure 2 will depicts the top model (buffer size) for each analysis. This will either be 1 figure with with a panel for each analysis (A = global, B = Anthropogenic, C = landscape), or one figure with the points colored for each analysis. I will generate both here and see which displays the data/conclusions most effectively
+
+### Option A
+The first option is simple because we already have the 3 plots generated from earlier we just have to combine them and add the labels for each panel. 
+
+#### Plot
+
+
+```{r figure 2 option 1}
+
+figure_2_a <- 
+  ggarrange(global_buffer_plot 
+            + rremove('ylab') +
+              rremove('xlab'),
+            anthro_buffer_plot
+             + rremove('ylab') +
+              rremove('xlab'),
+            land_buffer_plot
+            + rremove('ylab'),
+            ncol = 1,
+            labels = 'AUTO',
+            label.x = 0.94,
+            label.y = 0.96,
+            font.label = list(size = 19),
+            widths = c(1,6))  %>% 
+  
+# add annotation to figure
+  annotate_figure(., 
+                  left = textGrob("Buffer width (meters)", 
+                                  rot = 90, 
+                                  vjust = 1,
+                                  gp = gpar(cex = 1.5)))
+
+figure_2_a
+```
+
+
+#### Export 
+
+Let's export this plot to see how it looks at a proper scaled
+```{r export figure 2 option 1}
+
+ggsave('figures/publication_figures/figure_2_a.jpg',
+       figure_2_a,
+       height = 15,
+       width = 13,
+       units = 'in',
+       dpi = 600)
+
+```
+
+
+That took way longer than it should have to arrange everything and adjust the margins for the common legend but it looks pretty good now.
+
+
+### Option B
+
+The second option requires a bit of rearranging the data to make the plot
+
+#### Data
+
+First we need to make the data long format so there is a column for the analysis type (e.g. globa, anthropogenic, landscape) which will allow us to plot these as variables
+
+```{r data fig 2 option b}
+
+buffer_data_long <- buffer_data %>% 
+  
+  pivot_longer(.,
+               cols = c(global_buffer_width, anthro_buffer_width, landscape_buffer_width),
+               names_to = 'analysis',
+               values_to = 'top_buffer')
+```
+ Looks good!
+ 
+
+ 
+#### Plot
+
+Now let's plot this, hopefully without too much work
+
+```{r plot fig 2 b}
+
+figure_2_b <- 
+ggplot(buffer_data_long, aes(x = species,
+                       y = top_buffer)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(img = img,
+                    fill = analysis),
+                size = 200,
+                position = position_dodge(width = 0.7),
+                show.legend = TRUE,
+                key_glyph = phylopic_key_glyph(img = buffer_data_long$img),
+                size = 10) +
+  
+  # make the silhouettes in the legend a reasonable size, without this they plot HUGE
+  guides(fill = guide_legend(override.aes = list(size = 5))) +
+  
+  scale_fill_manual('Analysis',
+                    values = c('seashell4','cadetblue3', 'palegreen4'),
+                    labels = c('Anthropogenic', 'Global', 'Landscape')) +
+  labs(x = 'Species',
+       y = 'Buffer width (meters)') +
+  
+  # set axis limits and breaks
+  scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
+  
+  # wrap long species names
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  
+  # set graph limits
+  coord_cartesian(ylim = c(0,4900)) +
+  
+  # set theme
+  theme_bw() +
+  theme(legend.key.size = unit(0.01, 'cm'),
+        panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 15),
+        axis.title = element_text(size = 17),
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15))
+
+figure_2_b
+```
+
+#### Save plot
+
+```{r}
+ggsave('figures/publication_figures/figure_2_b.jpg',
+       figure_2_b,
+       height = 13,
+       width = 15,
+       units = 'in',
+       dpi = 600)
+```
+

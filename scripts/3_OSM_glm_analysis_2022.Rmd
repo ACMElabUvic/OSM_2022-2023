@@ -76,7 +76,7 @@ Below is an R markdown cheatsheet to help you get started,
 
 ## Install packages
 
-If you don't already have the following packages installed, use the code below to install them. *NOTE this will not run automatically as eval=FALSE is included in the chunk setup (i.e. I don't want it to run every time I run this code since I have the packages installed)
+If you don't already have the following packages installed, use the code below to install them. *NOTE this will not run automatically as eval=FALSE is included in the chunk setup (i.e. I don't want it to run every time I run this code since I have the packages installed).
 
 ```{r install packages, eval=FALSE}
 
@@ -98,17 +98,17 @@ Then load the packages to your library so they are usable for this session.
 ```{r libraries, message=FALSE}
 
 library(tidyverse) # data tidying, visualization, and much more; this will load all tidyverse packages, can see complete list using tidyverse_packages()
-library(ggpubr) # make modificaions to plot for publication (arrange plots)
-library(PerformanceAnalytics)    #Used to generate a correlation plot
+library(ggpubr) # make modifications to plot for publication (arrange plots)
+library(PerformanceAnalytics)    # Used to generate a correlation plot
 library(Hmisc) # used to generate histograms for all variables in data frame
-library(glmmTMB)      #Constructing GLMMs
+library(glmmTMB)      # Constructing GLMMs
 library(MuMIn) # for model selection
 library(rphylopic) # add animal silhouettes to graphs
 library(broom) # extracting odds ratios in a tidy format
 
 ```
 
-# Summary statistics
+# Data
 
 ## Load detection data
 
@@ -119,7 +119,7 @@ These are two separate files from the two different fiscal years, so they need t
 ```{r data}
 
 # detection data
-# read in saved and cleaned detection data from the ACME_camera_script_9-2-2024.R 
+# read in saved and cleaned detection data from the 1_ACME_camera_script_9-2-2024.R 
 detections <- file.path('data/processed',
                         
                         c('OSM_ind_det_2021.csv',
@@ -136,56 +136,62 @@ detections <- file.path('data/processed',
   purrr::set_names('dets_2021',
                    'dets_2022') # R doesn't like when they are just numbers, you can make it work but it's annoying to call the data frame later so I've called them dets_year
 
+# look at data structure
 str(detections)
 ```
 
 ## Merge data
 
-Now we need to merge these two files to make plotting easier. 
+Now we need to merge these two files to make plotting them easier. 
 
 They have the same columns so we could just the base R `rbind()` function, but in case there are differences in the columns in the future, let's use the cleaner `dplyr::bind_rows()` function
 
-```{r}
+```{r merge detections}
 
 # Join two years of detection data
 detections_merged <- dplyr::bind_rows(detections$dets_2021,
                                       detections$dets_2022)
 
-# check new data
+# check structure of new data
 str(detections_merged)
 ```
 
 ## Data checks
 
-Let's check to make sure the data looks good after merging
+Check to make sure the data looks good after merging before moving on.
 
 ### Arrays and sites
 
-Let's check that there are the correct number of levels for array and sites, there should be 6 arrays and 233 sites (155 from 2022-2023 and 78 from 2021-2022)
+Let's check that there are the correct number of levels for arrays and sites, there should be 6 arrays and 233 sites (155 from 2022-2023 and 78 from 2021-2022).
 
-```{r}
+```{r check arrays and sites}
+
+# this will provide a summary of the levels
 str(detections_merged)
 
-# check the levels for array and sites
+# this will list all unique entries (levels) for each variable
 levels(detections_merged$array)
 levels(detections_merged$site)
+
 ```
-Everything looks good
+Everything looks good.
 
 ### NAs
 
-Let's ensure no NAs were introduced where there shouldn't be during the joining process
+Let's ensure no NAs were introduced where there shouldn't be during the joining process.
 
-```{r}
+```{r check NAs}
+
 # check for NAs introduced during data merge
 summary(detections_merged)
+
 ```
-THe only NAs are in the timediff column which is what we expect since any of the first observations won't have a timediff.
+THe only NAs are in the timediff column which is what we expect since any of the first observations won't have a a value for timediff. If you are confused by this re-visit the 1_ACME_camera_script.
 
 
 ## Data Formatting
 
-In order to get plots that have the same formatting as last years' report we have to do a bit of data formatting. First we need to make sure we are including the same relevant species (some were ignored for last years' report or grouped together)
+In order to get plots that have the same formatting as last years' report we have to do a bit of data formatting. First we need to make sure we are including the same relevant species (some were ignored for last years' report or grouped together).
 
 Last years report had the following species
 
@@ -210,7 +216,7 @@ Last years report had the following species
 * other 
 * mule deer
 
-And they grouped all humans except for staff as 'Humans'. Let's look at the species we have in the combined years of data and try to format it the same way
+And they grouped all humans except for staff as 'Humans'. Let's look at the species we have in the combined years of data and try to format it the same way.
 
 ```{r det species}
 
@@ -231,6 +237,8 @@ Now let's create a new data frame (tibble) to work with for the OSM figure summa
 *I personally would lump all the unknown together and all the birds together but for the sake of consistency with last year's figures we will remove the same entries and keep the birds separate, let's create a vector of entries to drop*
 
 ```{r det format}
+
+# create vector of entries to drop for plots
 species_drop <- c('Staff',
                   'Unknown deer',
                   'Unknown ungulate',
@@ -834,6 +842,27 @@ rm(covariates_all,
 
 Now we are going to run a global model which includes all HFI and LC variables that at first glance (will do a more thorough check later) seem to have enough data to include as covariates for each buffer width, and then we will compare these models see which buffer width best fit the data  for each species. After that we will optimize models so they don't includes any variables that are highly correlated.
 
+> Edit: we added subset analsyis (anthropogenic and landscape) where we subset the data into anthropogenic features (HFI) and landscape (landcover classes) to see how optimum buffer size was influenced based on the type of variables included in the models. For these subset analyses we also looked more closely at which variables were correlated and have adjusted the global models accordingly (i.e. dropped/merged the same variables) to make them more accurate and comparable to the subset models. If there are variables commented out of the models, these were used in the initial run-through of the analysis but were dropped in the subset models so I've dropped them accordingly in a re-run of the global models. 
+
+This almost means we have to add one quick data formatting step which wasn't here in the initial run through of the data
+
+```{r added data formatting}
+
+osm_final_df_2021_2022 <- osm_final_df_2021_2022 %>% 
+  
+  # use purr so all changes are made to all data frames
+  purrr::map(
+    ~.x %>% 
+      
+  # mutate data to merge variables that were correlated and similar enough to count as one for the purposes of this analysis (full explanation in subset analysis prep section)
+  mutate(pipeline_transmission_lines = pipeline + transmission_lines,
+         lc_forest = lc_coniferous + lc_broadleaf + lc_mixed))
+
+# view structure of one data frame
+str(osm_final_df_2021_2022$`250 meter buffer`)
+```
+
+
 We don't need to do ALL the species since many don't have enough data.
 
 > Refer to the 1_ACME_camera_script_9-2-2024.html or .Rmd the plot for proportional monthly detections should provide info on which species we have enough data for, can be found under Response metrics/3.Proportion monthly detections
@@ -869,23 +898,25 @@ black_bear_mods <- osm_final_df_2021_2022 %>%
                         
                         # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -908,9 +939,13 @@ model.sel(black_bear_mods)
 
 Looks like the smallest buffer (250) fits the data best for black bears.
 
+> Note about re-run global models: when we removed the correlated variables the top model satyed the same (250m) but the weight increased (from 0.159 to 0.678)
+
 Let's look at this model closer
 
 #### Model summary
+
+Since we aren't interpreting the magnitude and direction of effect for individual variables in the model as you normally would, the model summary serves primarily to see that there are no issues with the top model (convergence issues, large SE, etc.) that could cause us to quetion the results of the model.sel() function.
 
 ```{r black bear 250 summary}
 
@@ -997,9 +1032,7 @@ List of correlated variables:
 * roads & veg_edges 0.71
 * roads & lc_developed 0.57
 
-#### Model list (Andrew can you review this)
-
-> Jake/Andrew can you suggest some additional subset models if needed 
+#### Model list 
 
 Let's create another global model without these correlated variables. I'm going to select transmission_lines over pipeline because the summary from earlier showed transmission lines had larger effect on black bear presence, and I'm going to choose to keep roads instead of veg edges and the developed landcover class because we are interested in the effect of roads more than these other two variables.
 
@@ -1174,7 +1207,7 @@ Let's repeat this process for each species that we have enough data for.
 
 We may or may not have enough data for caribou but let's try it at least for this preliminary report
 
-We can use the same code from black bears (above) to run global models for each buffer width **except remember we want to remove 250 meters**
+We can use the same code from black bears (above) to run global models for each buffer width 
 
 And in the same chunk to save time let's also run the `model.sel()` function
 
@@ -1191,23 +1224,25 @@ caribou_mods <- osm_final_df_2021_2022 %>%
                         
                         # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1218,18 +1253,18 @@ caribou_mods <- osm_final_df_2021_2022 %>%
 model.sel(caribou_mods)
 ```
 
-We get a warning that there are some model convergence problems, I expect this is because we don't have enough data for caribou but I don't have time to dig into this now so we will investigate more closely for final analysis.
+We get a warning that there are some model convergence problems, I expect this is because we don't have enough data for caribou, so we may choose to remove the caribou results from the manuscript or provide that caveat.
 
 For now let's examine the top buffer width and see if the model seems reasonable.
 
->For caribou 3000m buffer is top model *for now*
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for caribou does change (3000m to 1000m) which now matches the top model for anthropogenic features, this could be because there are more anthro features in the global models and/or because of lack of data/model convergence issues. If we see this same trend with other global models it will be worth mentioning as a caveat in the discussion.
 
-#### Model summary 3000m
+#### Model summary 1000m
 
 Let's take a closer look at the top model summary
-```{r caribou 3000 summary}
+```{r caribou 1000 summary}
 
-summary(caribou_mods$`3000 meter buffer`)
+summary(caribou_mods$`1000 meter buffer`)
 ```
 
 There's nothing that catches my eye immediately as being sus about this particular model so it may not have been one with convergence issues. We will keep it in report for now
@@ -1237,9 +1272,6 @@ There's nothing that catches my eye immediately as being sus about this particul
 ### Subset Models
 
 Add later if deemed necessary.
-
-### Top Model
-
 
 
 ## Coyote
@@ -1257,23 +1289,25 @@ coyote_mods <- osm_final_df_2021_2022 %>%
                         
                         # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1284,23 +1318,21 @@ coyote_mods <- osm_final_df_2021_2022 %>%
 model.sel(coyote_mods)
 ```
 
-> for coyote top model appears to be 2250 m
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for coyote did change (2250-5000). As with caribou this result is also more similar to the top anthro model (4750m)
 
-#### Model summary 2250m
+#### Model summary 5000m
 
 Let's get the model summary for this model
 
-```{r coyote 2250 summary}
+```{r coyote 5000 summary}
 
-summary(coyote_mods$`2250 meter buffer`)
+summary(coyote_mods$`5000 meter buffer`)
 ```
 Everything looks good here
 
 ### Subset models
 
 Add later if deemed necessary.
-
-### Top model
 
 
 
@@ -1317,25 +1349,27 @@ fisher_mods <- osm_final_df_2021_2022 %>%
 
      glmmTMB::glmmTMB(cbind(fisher, absent_fisher) ~
                         
-                         # HFI
+                        # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1345,7 +1379,7 @@ fisher_mods <- osm_final_df_2021_2022 %>%
 model.sel(fisher_mods)
 ```
 
-> For fisher top model is 1000 meter
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for fisher did not change but the weight did increase (0.266 - 0.526)
 
 
 #### Model summary 1000m
@@ -1362,8 +1396,6 @@ Everything looks good
 
 Add later if deemed necessary.
 
-### Top model
-
 
 ## Grey wolf
 
@@ -1379,25 +1411,27 @@ wolf_mods <- osm_final_df_2021_2022 %>%
 
      glmmTMB::glmmTMB(cbind(grey_wolf, absent_grey_wolf) ~
                         
-                         # HFI
+                        # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1408,24 +1442,21 @@ wolf_mods <- osm_final_df_2021_2022 %>%
 model.sel(wolf_mods)
 ```
 
-> For grey wolf top model is 500 m buffer
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for wolf did change (500 - 3500), as with coyote and caribou this is more similar to top anthro modelthan it was before AND actually the same as the landscape model
 
-#### Model summary 500m
+#### Model summary 3500m
 
 Let's get the model summary for this model
 
-```{r wolf 500 summary}
+```{r wolf 3500 summary}
 
-summary(wolf_mods$`500 meter buffer`)
+summary(wolf_mods$`3500 meter buffer`)
 ```
 
-interesting that seismic lines weren't significant but 3d seismic were and have a negative estimate
 
 ### Subset models
 
 Add later if deemed necessary.
-
-### Top model
 
 
 
@@ -1443,25 +1474,27 @@ lynx_mods <- osm_final_df_2021_2022 %>%
 
      glmmTMB::glmmTMB(cbind(lynx, absent_lynx) ~
                         
-                       # HFI
+                        # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1472,15 +1505,15 @@ lynx_mods <- osm_final_df_2021_2022 %>%
 model.sel(lynx_mods)
 ```
 
-> For lynx the top model is the 1250 m buffer
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for lynx did change (1250 - 250), as with others this is more similar to top anthro model (acutally the same as anthro model).
 
-#### Model summary 1250m
+#### Model summary 250m
 
 Let's get the model summary
 
-```{r lynx 1250 summary}
+```{r lynx 250 summary}
 
-summary(lynx_mods$`1250 meter buffer`)
+summary(lynx_mods$`250 meter buffer`)
 ```
 Everything looks good so far
 
@@ -1488,7 +1521,6 @@ Everything looks good so far
 
 Add later if deemed necessary.
 
-### Top model
 
 
 
@@ -1508,23 +1540,25 @@ moose_mods <- osm_final_df_2021_2022 %>%
                         
                         # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1535,7 +1569,7 @@ moose_mods <- osm_final_df_2021_2022 %>%
 model.sel(moose_mods)
 ```
 
-> For moose the top model is the 250 m buffer
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for moose did not change but the weight did increase (0.504 - 0.941). This top model is the same as the landscape model.
 
 #### Model summary 250m
 
@@ -1550,8 +1584,6 @@ Looks good for now
 ### Subset models
 
 Add later if deemed necessary
-
-### Top model
 
 
 
@@ -1568,25 +1600,27 @@ fox_mods <- osm_final_df_2021_2022 %>%
 
      glmmTMB::glmmTMB(cbind(red_fox, absent_red_fox) ~
                         
-                         # HFI
+                        # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1599,7 +1633,7 @@ model.sel(fox_mods)
 
 ```
 
-> For red fox the top model is 4750 m buffer
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for fox did not change but the weight dropped (0.855 - 0.367). This top model is the same as the landscape model.
 
 #### Model summary 4750m
 
@@ -1615,10 +1649,6 @@ Looks good so far
 ### Subset Models
 
 Add later if deemed necessary.
-
-### Top model
-
-
 
 
 ## White-tailed deer
@@ -1638,23 +1668,25 @@ deer_mods <- osm_final_df_2021_2022 %>%
                         
                         # HFI
                         scale(harvest) +
-                        scale(pipeline) +
-                        scale(roads) +
+                        # scale(pipeline) +
+                        # scale(roads) +
                         scale(seismic_lines) +
                         scale(seismic_lines_3D) +
                         scale(trails) +
-                        scale(transmission_lines) +
-                        scale(veg_edges) +
+                        # scale(transmission_lines) +
+                        # scale(veg_edges) +
                         scale(wells) +
                         scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
                         
                         # VEG covariates in numerical order
                         scale(lc_grassland) +
-                        scale(lc_coniferous) +
-                        scale(lc_broadleaf) +
-                        scale(lc_mixed) +
+                        # scale(lc_coniferous) +
+                        # scale(lc_broadleaf) +
+                        # scale(lc_mixed) +
                         scale(lc_developed) +
-                        scale(lc_shrub) +
+                        # scale(lc_shrub) +
+                        scale(lc_forest) +
                         
                         # Random effect of array
                         (1|array),
@@ -1666,7 +1698,7 @@ deer_mods <- osm_final_df_2021_2022 %>%
 model.sel(deer_mods)
 ```
 
-> For deer the top model was also the 1500 buffer
+> Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for deer did not change but the weight dropped (0.974 - 0.234). This top model is the same as the landscape model.
 
 #### Model summary 1500m
 
@@ -1680,15 +1712,14 @@ Looks okay for now
 
 ### Subset models
 
-Add later if deemed necessary
-
-### Top model
+Add later if deemed necessary.
 
 
 ## Top buffers
 
 For convenience here is a list of the top buffer widths for each species
 
+**Initial run**   
 * Black bear - 250m   
 * Caribou - 3000m   
 * Coyote - 2250m    
@@ -1697,521 +1728,23 @@ For convenience here is a list of the top buffer widths for each species
 * Lynx - 1250m    
 * Moose - 250m    
 * Red fox - 4750    
+* White-tailed deer - 1500m  
+
+**Re-run**    
+* Black bear - 250m   
+* Caribou - 1000m   
+* Coyote - 5000m    
+* Fisher - 1000m    
+* Grey wolf - 3500m   
+* Lynx - 250m   
+* Moose - 250m    
+* Red fox - 4750m   
 * White-tailed deer - 1500m   
 
 
 
-## Plots for all species
 
-
-### Buffer size
-
-What I want to do here is create a figure that plots a point for each species at the buffer size that was in the top model.
-
-#### Data frame
-
-Before we can do this I need to make a data frame that include the species, top buffer width, and any other info I may want in the plot.
-
-```{r buffer data}
-
-buffer_data <- tibble(
-  
-  #define number of rows
-  .rows = 9,
-  
-  # create species column
-  species = c('Black bear',
-              'Caribou',
-              'Coyote',
-              'Fisher',
-              'Grey wolf',
-              'Lynx',
-              'Moose',
-              'Red fox',
-              'White-tailed deer'),
-  
-  # create buffer column w/ buffer corresponding to the top model for each species
-  buffer_width = c(250,
-                   3000,
-                   2250,
-                   1000,
-                   500,
-                   1250,
-                   250,
-                   4750,
-                   1500),
-  
-   # add phylopic uuid for each species for plotting 
-  image = c(get_uuid(name = 'Ursus americanus'),
-           get_uuid(name = 'Rangifer tarandus'),
-           get_uuid(name = 'Canis latrans'),
-           get_uuid(name = 'Pekania pennanti'),
-           get_uuid(name = 'Canis lupus'),
-           get_uuid(name = 'Lynx lynx'),
-           get_uuid(name = 'Alces alces'),
-           get_uuid(name = 'Vulpes vulpes'),
-           get_uuid(name ='Odocoileus virginianus'))
-  
-)
-```
-
-#### Plot
-
-```{r plot buffers}
-
-ggplot(buffer_data,
-       aes( x = species,
-            y = buffer_width)) +
-  
-  # add points as phylopic silhouettes
-  geom_phylopic(aes(uuid = image),
-                size = 500) +
-  
-  scale_y_continuous(breaks = seq(0, 5000, by = 250)) +
-  
-  coord_cartesian(ylim = c(0, 4900))
-```
-This looks alright but I don't love all the default phylopic images that are used. 
-
-
-#### Fix phylopics 
-
-We can go to the [Phylopic website](https://www.phylopic.org/) and check out other options and then use the code below to search for the uuid from those options for the ones we want to replace
-
-```{r search phylopic}
-
-# Caribou could be bigger
-get_uuid(name = 'Rangifer tarandus',
-         n = 6) 
-# I like the 5th one best
-
-# Coyote doesn't need to have a food item
-get_uuid(name = 'Canis latrans',
-         n = 6) 
-# I like the 6th one best
-
-# Grey wolf shouldn't be the same as coyote
-get_uuid(name = 'Canis lupus',
-         n = 5) 
-# I like 2 or 5
-
-# Moose needs a body
-get_uuid(name = 'Alces alces',
-         n = 3) 
-# 3 is best
-
-# red fox is too big
-get_uuid(name = 'Vulpes vulpes',
-         n = 7) 
-# 4 is best
-
-# deer is weird
-get_uuid(name = 'Odocoileus virginianus',
-         n = 6) 
-# 5 is best
-```
-
-Let's alter the code from above to change the phylopic images
-```{r alter phylopic data}
-buffer_data <- tibble(
-  
-  #define number of rows
-  .rows = 9,
-  
-  # create species column
-  species = c('Black bear',
-              'Caribou',
-              'Coyote',
-              'Fisher',
-              'Grey wolf',
-              'Lynx',
-              'Moose',
-              'Red fox',
-              'White-tailed deer'),
-  
-  # create buffer column w/ buffer corresponding to the top model for each species
-  buffer_width = c(250,
-                   3000,
-                   2250,
-                   1000,
-                   500,
-                   1250,
-                   250,
-                   4750,
-                   1500),
-  
-   # add phylopic uuid for each species for plotting 
-  image = c(get_uuid(name = 'Ursus americanus'),
-            'e6e864fd-8e3d-435f-9db3-dc6869c589f1', # caribou 5
-            'e6a2fa4b-85df-43b4-989c-34a65ba7eee3', # coyote 6
-            get_uuid(name = 'Pekania pennanti'),
-            '76c8fdec-d0af-47b9-b949-dc610419d832', # wolf 5
-            get_uuid(name = 'Lynx lynx'),
-            '74eab34a-498c-4614-aece-f02361874f79', # moose 3
-            'd67d3bf6-3509-4ab6-819a-cd409985347e', # red fox 4
-            '6038e80c-398d-47b2-9a69-2b9edf436f64') # white-tailed deer 6
-  
-)
-```
-
-#### Plot again
-
-Using the code from above with the fixed images let's plot it again
-
-```{r plot buffers again}
-
-buffer_plot <- ggplot(buffer_data,
-                      aes( x = species,
-                           y = buffer_width)) +
-  
-  # add points as phylopic silhouettes
-  geom_phylopic(aes(uuid = image),
-                size = 400) +
-  
-  # set axis limits and breaks
-  scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
-  
-  # wrap long species names
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
-  
-  # set graph limits
-  coord_cartesian(ylim = c(0,4900)) +
-  
-  # make nicer labels
-  labs(y = 'Buffer width (meters)') +
-  
-  # set theme
-  theme_bw() +
-  theme(panel.grid.minor = element_blank(),
-        axis.text = element_text(size = 14),
-        axis.title = element_text(size = 16))
-
-buffer_plot 
-```
-
-BEAUTIFUL!!! If I do say so myself
-
-#### Save plot
-
-```{r save buffer plot}
-
-ggsave('figures/OSM_species_buffers_2022.jpeg',
-       buffer_plot,
-       width = 18,
-       height = 12,
-       units = 'in',
-       dpi = 600)
-```
-
-
-### Body size plot
-
-Now I want to see if their are trends between body size and which bfuffer distance performed best. I'll first need to add a body size column to the data.
-
-#### Mutate data
-
-To do this I'm going to google the avergae body size of each species and then add it as a column using mutate
-
-> ** IMPORTANT - this is just for data visualization purposes!. Since we don't actually have data on body size of the individuals in our study I can't run any analysis on this but I can use it to visualize if there appears to be any trends worth investigating.
-
-```{r}
-
-# first add body size to buffer data
-body_size_data <- buffer_data %>% 
-  
-  # use mutate to create new column
-  mutate(body_size = case_when(species == 'Black bear' ~ 181,
-                               species == 'Caribou' ~ 355,
-                               species == 'Coyote' ~ 15,
-                               species == 'Fisher' ~ 3.5,
-                               species == 'Grey wolf' ~ 39,
-                               species == 'Lynx' ~ 11,
-                               species == 'Moose' ~ 555,
-                               species == 'Red fox' ~ 5.2,
-                               species == 'White-tailed deer' ~ 200),
-         log_body_size = log(body_size))
-```
-
-#### Plot
-
-Now let's plot this as a scatterplot
-
-```{r}
-
-body_size_plot <- ggplot(body_size_data, aes(x = log_body_size,
-                                             y = buffer_width)) +
-  
-  # add points as phylopic silhouettes
-  geom_phylopic(aes(uuid = image),
-                size = 400) +
-  
-  labs(x = 'Log body size (kg)',
-       y = 'Buffer width (meters)') +
-  
-  # set theme
-  theme_bw() +
-  theme(panel.grid.minor = element_blank(),
-        axis.text = element_text(size = 14),
-        axis.title = element_text(size = 16))
-
-body_size_plot
-```
-
-#### Save plot
-
-```{r}
-ggsave('figures/OSM_body_size_buffers_2022.jpg',
-       body_size_plot,
-       width = 18,
-       height = 12,
-       units = 'in',
-       dpi = 600)
-```
-
-
-### Odds ratio plots
-
-What we need to do now is extract the coefficient estimates from each top model, as well as the 95% CI so we can plot them for easier visualization and understanding of the data
-
-
-#### Extract odds ratios
-
-The `confint()` function will extract the coefficients and CI intervals from a model, so what we need to do is make a list of all the models, then use the `map()` function in *purrr* to apply the `confint()` function to all the models and get the coefficients. We want this to result in a tibble that has a column for the HFI feature (we aren't plotting the lc_class data for this report), the upper and lower CI, and the coefficient estimate.
-
-In order to do this we have to do a bit of data wrangling, currently this isn't the most pleasing way to accomplish the desired outcome, but it works. 
-
-```{r extract odds}
-
-# This is also a dog shit way to do this but I need to get this done
-
-# make a list of the top models for each species
-top_models <- list(black_bear_mods$`250 meter buffer`,
-                   caribou_mods$`3000 meter buffer`,
-                   coyote_mods$`2250 meter buffer`,
-                   fisher_mods$`1000 meter buffer`,
-                   wolf_mods$`500 meter buffer`,
-                   lynx_mods$`1250 meter buffer`,
-                   moose_mods$`250 meter buffer`,
-                   fox_mods$`4750 meter buffer`,
-                   deer_mods$`1500 meter buffer`) %>%  
-  
-  # pipe into purrr to create coefficient table for all models
-  purrr::map(
-    ~.x %>% 
-      
-      # extract the coefficients and upper and lower CI
-      confint() %>% 
-      
-      # format resulting object as a tibble data frame
-      as_tibble() %>%
-      
-      # subset to just the HFI variables for these plots
-      slice_head(n = 11) %>% 
-      
-      # remove first row which is the intercept
-      slice_tail(n = 10) %>% 
-      
-      # add a column where we can put the feature names
-      rowid_to_column() %>% 
-      
-      # rename the columns for plotting
-      rename('lower' = `2.5 %`,
-             'upper' = `97.5 %`,
-             'estimate' = Estimate,
-             'feature' = rowid) %>% 
-      
-      # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
-      mutate(feature = as.factor(feature),
-             feature = recode(feature,
-                              '1' = 'harvest',
-                              '2' = 'pipeline',
-                              '3' = 'roads',
-                              '4' = 'seismic_lines',
-                              '5' = 'seismic_lines_3D',
-                              '6' = 'trails',
-                              '7' = 'transmission_lines',
-                              '8' = 'veg_edges',
-                              '9' = 'wells',
-                              '10' = 'osm_industrial'))) %>% 
-  
-  # set the names of each resulting tibble data frame to the species name
-  purrr::set_names('Black bear',
-                   'Caribou',
-                   'Coyote',
-                   'Fisher',
-                   'Grey wolf',
-                   'Lynx',
-                   'Moose',
-                   'Red fox',
-                   'White-tailed deer')
-```
-
-#### Merge data frames
-
-Now we have a data frame with the odds ratios for each species, but if we want these on a plot together we need them all in one data frame. 
-
-To merge data into one data frame we can use the `list_rbind()` function from the *purrr* package which will take each element of the list and stack them on top of one another just like rbind does with data frames, and if we use the names_to argument we can extract the names of the list elements and assign them to a column so we know which data comes from which species model (list element)
-
-In this code I also add a new column called uuid which contains the image id (uuid) for a phylopic silhouette of each species that I may want to use for plotting
-
-[Phylopic.or](https://www.phylopic.org/) is an open source online database of silhouettes various contributors have created for use. There is an R package that works with this data called *rphylopic*; we can use the `get_uuid()` function from this package to extract the data for a silhouette for each species we want, which is what I've done here.
-
-
-```{r rbind odds}
-
-# combine all list elements 
-coeffs_df_all <- list_rbind(top_models,
-                            names_to = 'species') %>% 
-  
-  # change species to a factor for plotting
-  mutate(species = as.factor(species),
-         
-         # add phylopic uuid for each species for plotting 
-         # the uuid is extracted using getuuid with the species name as name = ''
-         uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
-                          species == 'Caribou' ~ get_uuid(name = 'Rangifer tarandus'),
-                          species == 'Coyote' ~ get_uuid(name = 'Canis latrans'),
-                          species == 'Fisher' ~ get_uuid(name = 'Pekania pennanti'),
-                          species == 'Grey wolf' ~ get_uuid(name = 'Canis lupus'),
-                          species == 'Lynx' ~ get_uuid(name = 'Lynx lynx'),
-                          species == 'Moose' ~ get_uuid(name = 'Alces alces'),
-                          species == 'Red fox' ~ get_uuid(name = 'Vulpes vulpes'),
-                          species == 'White-taield deer' ~ get_uuid(name ='Odocoileus virginianus'))) 
-  
-```
-
-#### Plot odds all species
-
-Now let's explore some different options to plot the coefficients
-
-##### geom_phylopic
-
-Let's try plotting all the species on one plot using `ggplot()`
-```{r plot odds all}
-
-# provide data and mapping aesthetics
-ggplot(coeffs_df_all, aes(x = feature, 
-                          y = estimate, 
-                          group = uuid)) +
-  
-   geom_errorbar(aes(ymin = lower, 
-                     ymax = upper, 
-                     color = feature),
-                width = 0.4,
-                linewidth = 0.5,
-                position = position_dodge(width = 0.9)) +
-  
-    # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
-  geom_phylopic(aes(x = feature, 
-                 y = estimate,
-                 uuid = uuid),
-             position = position_dodge(width = 0.9),
-             size = 0.3)
-  
-  
-
-
-```
-
-This works but unfortunately is very messy with the images as the points since they don't all have the same centerline and are different sizes.
-
-I try with the code below to select better silhouettes
-
-```{r select silhouettes}
-
-# combine all list elements 
-coeffs_df_all <- list_rbind(top_models,
-                            names_to = 'species') %>% 
-  
-  # change species to a factor for plotting
-  mutate(species = as.factor(species),
-         
-         # add phylopic uuid for each species for plotting 
-         # the uuid is extracted using getuuid with the species name as name = ''
-         uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
-                           species == 'Caribou' ~ 'e6e864fd-8e3d-435f-9db3-dc6869c589f1', # caribou 5
-                          species == 'Coyote' ~ 'e6a2fa4b-85df-43b4-989c-34a65ba7eee3', # coyote 6
-                          species == 'Fisher' ~ '735066c6-2f3e-4f97-acb1-06f55ae075c9',
-                          species == 'Grey wolf' ~ '76c8fdec-d0af-47b9-b949-dc610419d832', # wolf 5
-                          species == 'Lynx' ~ '74eab34a-498c-4614-aece-f02361874f79', # moose 3
-                          species == 'Moose' ~ '74eab34a-498c-4614-aece-f02361874f79',
-                          species == 'Red fox' ~ 'd67d3bf6-3509-4ab6-819a-cd409985347e', # red fox 4
-                          species == 'White-taield deer' ~ '6038e80c-398d-47b2-9a69-2b9edf436f64')) # white-tailed deer 6
-```
-
-
-Try plotting all again
-
-```{r plot all odds 2}
-
-ggplot(coeffs_df_all, aes(x = feature, 
-                          y = estimate, 
-                          group = uuid)) +
-  
-   geom_errorbar(aes(ymin = lower, 
-                     ymax = upper, 
-                     color = feature),
-                width = 0.4,
-                linewidth = 0.5,
-                position = position_dodge(width = 1.2)) +
-  
-    # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
-  geom_phylopic(aes(x = feature, 
-                 y = estimate,
-                 uuid = uuid),
-             position = position_dodge(width = 1.2),
-             size = 0.2)
-  
-  
-
-
-```
-
-Unfortunately they still don't center on the lines like they should so will try a different plot
-
-##### Facet_wrap
-
-```{r plot all odds facet_wrap}
-
-ggplot(coeffs_df_all,
-       aes(x = feature,
-           y = estimate)) +
-  
-  # add points
-  geom_point() +
-  
-  # add errorbar
-  geom_errorbar(aes(ymin = lower, 
-                     ymax = upper),
-                width = 0.4,
-                linewidth = 0.5) +
-  
-  facet_wrap(vars(species)) +
-  
-  # wrap long axis names
-  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
-  
-  # adjust theme elements
-  theme(axis.text.x = element_text(angle = 90,
-                                   hjust = 1),
-        axis.ticks.x = element_blank())
-```
-
-##### Plot_model
-
-If all else fails can use [plot_model function](https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_model_estimates.html)
-
-###### Example with black bear model
-
-```{r plot_model}
-
-library(sjPlot)
-
-plot_model(black_bear_mods$`250 meter buffer`,
-           vline.color = 'black')
-```
-
-# Subset Analysis Prep
+# Analysis Prep
 
 ## Summary
 
@@ -2672,8 +2205,540 @@ coyote_anthro_mods <- osm_anthro_df_2021_2022 %>%
 model.sel(coyote_anthro_mods)
 
 ```
+```{r coyote anthro model summary}
+
+summary(coyote_anthro_mods$`4750 meter buffer`)
+```
+
+### Fisher
+
+```{r fisher anthro models}
+
+fisher_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(fisher, absent_fisher) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(fisher_anthro_mods)
+
+```
+
+```{r fisher anthro model summary}
+
+summary(fisher_anthro_mods$`250 meter buffer`)
+```
 
 
+### Grey wolf
 
+```{r wolf anthro models}
+
+wolf_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(grey_wolf, absent_grey_wolf) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(wolf_anthro_mods)
+
+```
+```{r wolf anthro model summary}
+
+summary(wolf_anthro_mods$`2000 meter buffer`)
+```
+
+
+### Lynx
+
+```{r lynx anthro models}
+
+lynx_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(lynx, absent_lynx) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(lynx_anthro_mods)
+
+```
+```{r lynx anthro model summary}
+
+summary(lynx_anthro_mods$`250 meter buffer`)
+```
+
+### Moose
+
+```{r moose anthro models}
+
+moose_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(moose, absent_moose) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(moose_anthro_mods)
+
+```
+
+```{r moose anthro model summary}
+
+summary(moose_anthro_mods$`750 meter buffer`)
+```
+
+
+### Red fox
+
+```{r fox anthro models}
+
+fox_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(red_fox, absent_red_fox) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(fox_anthro_mods)
+
+```
+
+```{r fox anthro model summary}
+
+summary(fox_anthro_mods$`1750 meter buffer`)
+```
+
+
+### White-tailed deer
+
+```{r deer anthro models}
+
+deer_anthro_mods <- osm_anthro_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(`white-tailed_deer`, `absent_white-tailed_deer`) ~
+                        
+                        # HFI that aren't correlated
+                        scale(harvest) +
+                        scale(seismic_lines) +
+                        scale(seismic_lines_3D) +
+                        scale(trails) +
+                        scale(wells) +
+                        scale(osm_industrial) +
+                        scale(pipeline_transmission_lines) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(deer_anthro_mods)
+
+```
+
+```{r deer anthr model summary}
+
+summary(deer_anthro_mods$`1500 meter buffer`)
+```
+
+
+## Landscape
+
+Now we will duplicate this analysis but for data that only includes landscape features.
+
+> For now we have to select EITHER lc_forest or lc_shrub as they are highly correlated
+
+### Black bear
+
+```{r bear land models}
+
+bear_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(black_bear, absent_black_bear) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(bear_land_mods)
+
+```
+
+```{r bear land mod summary}
+
+summary(bear_land_mods$`250 meter buffer`)
+```
+
+### Caribou
+
+```{r caribou land models}
+
+caribou_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(caribou, absent_caribou) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(caribou_land_mods)
+
+```
+
+```{r caribou land model summary}
+
+summary(caribou_land_mods$`250 meter buffer`)
+```
+
+
+### Coyote
+
+```{r coyote land models}
+coyote_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(coyote, absent_coyote) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(coyote_land_mods)
+
+```
+
+```{r coyote land mod summary}
+
+summary(coyote_land_mods$`3750 meter buffer`)
+```
+
+
+### Fisher
+
+```{r fisher land models}
+
+fisher_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(fisher, absent_fisher) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(fisher_land_mods)
+
+```
+
+```{r fisher land mod summary}
+
+summary(fisher_land_mods$`2500 meter buffer`)
+```
+
+
+### Grey wolf
+
+```{r wolf land models}
+
+wolf_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(grey_wolf, absent_grey_wolf) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(wolf_land_mods)
+
+```
+
+```{r wolf land mod summary}
+
+summary(wolf_land_mods$`3500 meter buffer`)
+```
+
+
+### Lynx
+
+```{r lynx land models}
+
+lynx_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(lynx, absent_lynx) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(lynx_land_mods)
+
+```
+
+```{r lynx land mod summary}
+
+summary(lynx_land_mods$`500 meter buffer`)
+```
+
+
+### Moose
+
+```{r moose land models}
+
+moose_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(moose, absent_moose) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(moose_land_mods)
+
+```
+
+```{r moose land mod summary}
+
+summary(moose_land_mods$`250 meter buffer`)
+```
+
+
+### Red fox
+
+```{r fox land models}
+
+fox_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(red_fox, absent_red_fox) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(fox_land_mods)
+
+```
+
+```{r fox land mod summary}
+
+summary(fox_land_mods$`4750 meter buffer`)
+```
+
+
+### White-tailed deer
+
+```{r deer land models}
+
+deer_land_mods <- osm_landscape_df_2021_2022 %>% 
+
+  # use purrr map to run the same functions for all buffer sizes ((all objects in list))
+  purrr::map(
+    ~.x %>%
+
+      # glmmTMB function let's us run the proportional binomial model using cbind to combine the present and absent columns for each species
+     glmmTMB::glmmTMB(cbind(`white-tailed_deer`, `absent_white-tailed_deer`) ~
+                        
+                        # Landscape classes that aren't correlated
+                        scale(lc_forest) +
+                        scale(lc_grassland) +
+                        scale(lc_developed) +
+                        
+                        # Random effect of array
+                        (1|array),
+                   data = .,
+                   family = 'binomial'))
+
+# run model selection
+model.sel(deer_land_mods)
+
+```
+
+> In summary it does matter whether you are looking at landscape or anthropogenic features which spatial scale you use. Only two species (lynx and moose) had spatial scales for both top models within 1000m (1km). There were also more well-defined top models (delta AIC greater than 2.00) when you subset data to specifically look at anthro or landscape features. 
 
 

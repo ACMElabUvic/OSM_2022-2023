@@ -200,3 +200,247 @@ Let's take a look at the model summary for the top model
 
 summary(black_bear_mods_no250$`500 meter buffer`)
 ```
+
+
+### Odds ratio plots
+
+What we need to do now is extract the coefficient estimates from each top model, as well as the 95% CI so we can plot them for easier visualization and understanding of the data
+
+
+#### Extract odds ratios
+
+The `confint()` function will extract the coefficients and CI intervals from a model, so what we need to do is make a list of all the models, then use the `map()` function in *purrr* to apply the `confint()` function to all the models and get the coefficients. We want this to result in a tibble that has a column for the HFI feature (we aren't plotting the lc_class data for this report), the upper and lower CI, and the coefficient estimate.
+
+In order to do this we have to do a bit of data wrangling, currently this isn't the most pleasing way to accomplish the desired outcome, but it works. 
+
+```{r extract odds}
+
+# This is also a dog shit way to do this but I need to get this done
+
+# make a list of the top models for each species
+top_models <- list(black_bear_mods$`250 meter buffer`,
+                   caribou_mods$`3000 meter buffer`,
+                   coyote_mods$`2250 meter buffer`,
+                   fisher_mods$`1000 meter buffer`,
+                   wolf_mods$`500 meter buffer`,
+                   lynx_mods$`1250 meter buffer`,
+                   moose_mods$`250 meter buffer`,
+                   fox_mods$`4750 meter buffer`,
+                   deer_mods$`1500 meter buffer`) %>%  
+  
+  # pipe into purrr to create coefficient table for all models
+  purrr::map(
+    ~.x %>% 
+      
+      # extract the coefficients and upper and lower CI
+      confint() %>% 
+      
+      # format resulting object as a tibble data frame
+      as_tibble() %>%
+      
+      # subset to just the HFI variables for these plots
+      slice_head(n = 11) %>% 
+      
+      # remove first row which is the intercept
+      slice_tail(n = 10) %>% 
+      
+      # add a column where we can put the feature names
+      rowid_to_column() %>% 
+      
+      # rename the columns for plotting
+      rename('lower' = `2.5 %`,
+             'upper' = `97.5 %`,
+             'estimate' = Estimate,
+             'feature' = rowid) %>% 
+      
+      # rename the entries to features, need to look at the order the features are in from the model summary and ensure it matches
+      mutate(feature = as.factor(feature),
+             feature = recode(feature,
+                              '1' = 'harvest',
+                              '2' = 'pipeline',
+                              '3' = 'roads',
+                              '4' = 'seismic_lines',
+                              '5' = 'seismic_lines_3D',
+                              '6' = 'trails',
+                              '7' = 'transmission_lines',
+                              '8' = 'veg_edges',
+                              '9' = 'wells',
+                              '10' = 'osm_industrial'))) %>% 
+  
+  # set the names of each resulting tibble data frame to the species name
+  purrr::set_names('Black bear',
+                   'Caribou',
+                   'Coyote',
+                   'Fisher',
+                   'Grey wolf',
+                   'Lynx',
+                   'Moose',
+                   'Red fox',
+                   'White-tailed deer')
+```
+
+#### Merge data frames
+
+Now we have a data frame with the odds ratios for each species, but if we want these on a plot together we need them all in one data frame. 
+
+To merge data into one data frame we can use the `list_rbind()` function from the *purrr* package which will take each element of the list and stack them on top of one another just like rbind does with data frames, and if we use the names_to argument we can extract the names of the list elements and assign them to a column so we know which data comes from which species model (list element)
+
+In this code I also add a new column called uuid which contains the image id (uuid) for a phylopic silhouette of each species that I may want to use for plotting
+
+[Phylopic.or](https://www.phylopic.org/) is an open source online database of silhouettes various contributors have created for use. There is an R package that works with this data called *rphylopic*; we can use the `get_uuid()` function from this package to extract the data for a silhouette for each species we want, which is what I've done here.
+
+
+```{r rbind odds}
+
+# combine all list elements 
+coeffs_df_all <- list_rbind(top_models,
+                            names_to = 'species') %>% 
+  
+  # change species to a factor for plotting
+  mutate(species = as.factor(species),
+         
+         # add phylopic uuid for each species for plotting 
+         # the uuid is extracted using getuuid with the species name as name = ''
+         uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
+                          species == 'Caribou' ~ get_uuid(name = 'Rangifer tarandus'),
+                          species == 'Coyote' ~ get_uuid(name = 'Canis latrans'),
+                          species == 'Fisher' ~ get_uuid(name = 'Pekania pennanti'),
+                          species == 'Grey wolf' ~ get_uuid(name = 'Canis lupus'),
+                          species == 'Lynx' ~ get_uuid(name = 'Lynx lynx'),
+                          species == 'Moose' ~ get_uuid(name = 'Alces alces'),
+                          species == 'Red fox' ~ get_uuid(name = 'Vulpes vulpes'),
+                          species == 'White-taield deer' ~ get_uuid(name ='Odocoileus virginianus'))) 
+  
+```
+
+#### Plot odds all species
+
+Now let's explore some different options to plot the coefficients
+
+##### geom_phylopic
+
+Let's try plotting all the species on one plot using `ggplot()`
+```{r plot odds all}
+
+# provide data and mapping aesthetics
+ggplot(coeffs_df_all, aes(x = feature, 
+                          y = estimate, 
+                          group = uuid)) +
+  
+   geom_errorbar(aes(ymin = lower, 
+                     ymax = upper, 
+                     color = feature),
+                width = 0.4,
+                linewidth = 0.5,
+                position = position_dodge(width = 0.9)) +
+  
+    # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
+  geom_phylopic(aes(x = feature, 
+                 y = estimate,
+                 uuid = uuid),
+             position = position_dodge(width = 0.9),
+             size = 0.3)
+  
+  
+
+
+```
+
+This works but unfortunately is very messy with the images as the points since they don't all have the same centerline and are different sizes.
+
+I try with the code below to select better silhouettes
+
+```{r select silhouettes}
+
+# combine all list elements 
+coeffs_df_all <- list_rbind(top_models,
+                            names_to = 'species') %>% 
+  
+  # change species to a factor for plotting
+  mutate(species = as.factor(species),
+         
+         # add phylopic uuid for each species for plotting 
+         # the uuid is extracted using getuuid with the species name as name = ''
+         uuid = case_when(species == 'Black bear' ~ get_uuid(name = 'Ursus americanus'),
+                           species == 'Caribou' ~ 'e6e864fd-8e3d-435f-9db3-dc6869c589f1', # caribou 5
+                          species == 'Coyote' ~ 'e6a2fa4b-85df-43b4-989c-34a65ba7eee3', # coyote 6
+                          species == 'Fisher' ~ '735066c6-2f3e-4f97-acb1-06f55ae075c9',
+                          species == 'Grey wolf' ~ '76c8fdec-d0af-47b9-b949-dc610419d832', # wolf 5
+                          species == 'Lynx' ~ '74eab34a-498c-4614-aece-f02361874f79', # moose 3
+                          species == 'Moose' ~ '74eab34a-498c-4614-aece-f02361874f79',
+                          species == 'Red fox' ~ 'd67d3bf6-3509-4ab6-819a-cd409985347e', # red fox 4
+                          species == 'White-taield deer' ~ '6038e80c-398d-47b2-9a69-2b9edf436f64')) # white-tailed deer 6
+```
+
+
+Try plotting all again
+
+```{r plot all odds 2}
+
+ggplot(coeffs_df_all, aes(x = feature, 
+                          y = estimate, 
+                          group = uuid)) +
+  
+   geom_errorbar(aes(ymin = lower, 
+                     ymax = upper, 
+                     color = feature),
+                width = 0.4,
+                linewidth = 0.5,
+                position = position_dodge(width = 1.2)) +
+  
+    # add points for each estimate for each covariate and use position = position_dodge to shift the points so all the species don't plot on top of one another
+  geom_phylopic(aes(x = feature, 
+                 y = estimate,
+                 uuid = uuid),
+             position = position_dodge(width = 1.2),
+             size = 0.2)
+  
+  
+
+
+```
+
+Unfortunately they still don't center on the lines like they should so will try a different plot
+
+##### Facet_wrap
+
+```{r plot all odds facet_wrap}
+
+ggplot(coeffs_df_all,
+       aes(x = feature,
+           y = estimate)) +
+  
+  # add points
+  geom_point() +
+  
+  # add errorbar
+  geom_errorbar(aes(ymin = lower, 
+                     ymax = upper),
+                width = 0.4,
+                linewidth = 0.5) +
+  
+  facet_wrap(vars(species)) +
+  
+  # wrap long axis names
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  
+  # adjust theme elements
+  theme(axis.text.x = element_text(angle = 90,
+                                   hjust = 1),
+        axis.ticks.x = element_blank())
+```
+
+##### Plot_model
+
+If all else fails can use [plot_model function](https://cran.r-project.org/web/packages/sjPlot/vignettes/plot_model_estimates.html)
+
+###### Example with black bear model
+
+```{r plot_model}
+
+library(sjPlot)
+
+plot_model(black_bear_mods$`250 meter buffer`,
+           vline.color = 'black')
+```
+
