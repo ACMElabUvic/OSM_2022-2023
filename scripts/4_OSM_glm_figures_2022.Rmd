@@ -662,7 +662,7 @@ ggplot(buffer_data_long, aes(x = species,
   guides(fill = guide_legend(override.aes = list(size = 5))) +
   
   scale_fill_manual('Analysis',
-                    values = c('seashell4','cadetblue3', 'palegreen4'),
+                    values = c('black','cadetblue3', 'palegreen4'),
                     labels = c('Anthropogenic', 'Global', 'Landscape')) +
   labs(x = 'Species',
        y = 'Buffer width (meters)') +
@@ -693,6 +693,86 @@ figure_2_b
 ```{r}
 ggsave('figures/publication_figures/figure_2_b.jpg',
        figure_2_b,
+       height = 13,
+       width = 15,
+       units = 'in',
+       dpi = 600)
+```
+
+
+## Figure 3
+
+### Data
+
+First we need to take the body size data and turn it long format like we did with the buffer data for figure 2_b
+
+```{r long body size data}
+
+body_size_data_long <- body_size_data %>% 
+  
+  # pivot longer
+  pivot_longer(.,
+               cols = c(global_buffer_width, anthro_buffer_width, landscape_buffer_width),
+               names_to = 'analysis',
+               values_to = 'top_buffer')
+
+# look at data
+head(body_size_data_long)
+```
+
+### Plot
+
+This will be similar to the plot above bud on the x axis will be log body size instead of species. 
+
+```{r}
+
+figure_3 <- 
+ggplot(body_size_data_long, aes(x = log_body_size,
+                       y = top_buffer)) +
+  
+  # add points as phylopic silhouettes
+  geom_phylopic(aes(img = img,
+                    fill = analysis),
+                size = 200,
+                position = position_dodge(width = 0.25),
+                show.legend = TRUE,
+                key_glyph = phylopic_key_glyph(img = buffer_data_long$img),
+                size = 10) +
+  
+  # make the silhouettes in the legend a reasonable size, without this they plot HUGE
+  guides(fill = guide_legend(override.aes = list(size = 5))) +
+  
+  scale_fill_manual('Analysis',
+                    values = c('black','cadetblue3', 'palegreen4'),
+                    labels = c('Anthropogenic', 'Global', 'Landscape')) +
+  labs(x = 'Log body size (kg)',
+       y = 'Buffer width (meters)') +
+  
+  # set axis limits and breaks
+  scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
+  scale_x_continuous(breaks = seq(0, 7, by = 1)) +
+  
+  # set graph limits
+  coord_cartesian(ylim = c(0,4900)) +
+  
+  # set theme
+  theme_bw() +
+  theme(legend.key.size = unit(0.01, 'cm'),
+        panel.grid.minor = element_blank(),
+        axis.text = element_text(size = 18),
+        axis.title = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 18))
+
+figure_3
+```
+
+### Save
+
+```{r save fig 3}
+
+ggsave('figures/publication_figures/figure_3.jpg',
+       figure_3,
        height = 13,
        width = 15,
        units = 'in',
