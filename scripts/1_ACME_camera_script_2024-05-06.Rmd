@@ -2,11 +2,13 @@
 title: "ACME camera script 9-2-2024"
 author: "Marissa A. Dyck"
 date: "2024-02-09"
-output: 
+output:
+  pdf_document:
+    toc: true
   html_document:
     theme: journal
-    toc: yes
-    toc_float: yes
+    toc: true
+    toc_float: true
 ---
  
 > IMPORTANT the first two chunks of this r markdown file **after** the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
@@ -423,6 +425,64 @@ I've commented out this code so it doesn't run every time, you can select all th
 
 ```
 
+## Summaries
+
+Some summaries we may need for reports etc. 
+
+```{r summaries}
+
+# overall data summary
+str(OSM_2022_data)
+summary(OSM_2022_data)
+
+# mammal specific 
+levels(OSM_2022_data$species)
+
+# make vector of mammals
+mammal_species <- c('Black bear',
+                    'Caribou',
+                    'Coyote',
+                    'Fisher',
+                    'Grey wolf',
+                    'Lynx',
+                    'Moose',
+                    'Red fox',
+                    'White-tailed deer',
+                    'Snowshoe hare',
+                    'Red squirrel',
+                    'Marten',
+                    'Striped skunk',
+                    'Cougar',
+                    'Porcupine',
+                    'Short-tailed weasel',
+                    'Otter',
+                    'Beaver',
+                    'Wolverine',
+                    'Long-tailed weasel')
+
+# how many photos of just mammals
+all_mammals <- OSM_2022_data %>% 
+  
+  filter(species %in% mammal_species)
+
+
+
+# focal species 
+focal_species <- c('Black bear',
+                   'Caribou',
+                   'Coyote',
+                   'Fisher',
+                   'Grey wolf',
+                   'Lynx',
+                   'Moose',
+                   'Red fox',
+                   'White-tailed deer')
+
+# detections of focal species
+focal_mammals <- OSM_2022_data %>% 
+  
+  filter(species %in% focal_species)
+```
 
 ## Data checks
 

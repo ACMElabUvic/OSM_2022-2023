@@ -156,6 +156,8 @@ detections_merged <- dplyr::bind_rows(detections$dets_2021,
 str(detections_merged)
 ```
 
+
+
 ## Data checks
 
 Check to make sure the data looks good after merging before moving on.
@@ -188,6 +190,25 @@ summary(detections_merged)
 ```
 THe only NAs are in the timediff column which is what we expect since any of the first observations won't have a a value for timediff. If you are confused by this re-visit the 1_ACME_camera_script.
 
+## Summary
+
+Some summaries of the merged detection data
+
+```{r summaries}
+focal_species <- c('Black bear',
+                      'Caribou',
+                      'Coyote',
+                      'Fisher',
+                      'Grey wolf',
+                      'Lynx',
+                      'Moose',
+                      'Red fox',
+                      'White-tailed deer')
+
+focal_mammals <- detections_merged %>% 
+  
+  filter(species %in% focal_species)
+```
 
 ## Data Formatting
 
@@ -225,6 +246,9 @@ detections_merged %>%
   # group by array and species
   group_by(species) %>% 
   summarise(n = n()) %>% 
+  
+  # sort from greatest to least
+  arrange(desc(n)) %>% 
   
   # have R print everything
   print(n = nrow(.))
