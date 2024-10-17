@@ -1,3 +1,8 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 # OSM_2022-2023
 This repository contains data, R scripts and associated outputs, and other materials necessary for the Applied Conservation and Macro Ecology (ACME) lab's Oil Sands Monitoring project for the 2022-2023 season.
 
@@ -36,33 +41,75 @@ Data Analysis Contact Information
 *Files in main folder*
 		
 * <span style = "color: #7B0F17;">**OSM_2022-2023.Rproj**</span>; R project to run code for data cleaning and analyses. 
+* <span style = "color: #7B0F17;">**README**</span>; this README file with various extensions for viewing (.html, .pdf) and editing (.md) 
+
 
 *Files in data folder*
 
-*/2021-2022*  
-This folder includes cleaned data from the previous year of sampling for landscape units 2 and 3 (LU2 & LU3).
+*/processed*  
+This folder includes data for the current year (2022-2023) that has been cleaned and reformatted using scripts within this repository. It also includes some data from the prior year (2021-2022) that was cleaned and formatted using similar scripts in a repository for that year. 
 
-* <span style = "color: #7B0F17;">**data/2021-2022/ **</span>;
+* <span style = "color: #7B0F17;">**OSM_covariates_2021.csv**</span>;  contains cleaned HFI and land cover data from LUs sampled in 2021-2022  
+
+* <span style = "color: #7B0F17;">**OSM_covariates_2022.csv**</span>;  contains cleaned HFI and land cover data from LUs sampled in 2022-2022  
+
+* <span style = "color: #7B0F17;">**OSM_covariates_grouped_2021_2022.csv**</span>;  contains cleaned HFI and land cover data that have also been grouped based on feature similarity from LUs sampled in 2021-2022and 2022-2023  
+
+* <span style = "color: #7B0F17;">**OSM_covariates_merged_2021_2022.csv**</span>;  contains cleaned HFI and land cover data from LUs sampled in 2021-2022 and 2022-2023 (*Note these have not been grouped yet*) 
+
+* <span style = "color: #7B0F17;">**OSM_covariates_wide_2022.csv**</span>;  contains cleaned data pertaining to the deployment location, data, time, and functionality of the cameras used in the project  
+
+* <span style = "color: #7B0F17;">**OSM_deployment_2022.csv**</span>;  contains cleaned HFI and land cover data that have also been grouped based on feature similarity from LUs sampled in 2021-2022and 2022-2023   
+
+* <span style = "color: #7B0F17;">**OSM_ind_det_2021.csv**</span>;  contains independent detections for species detected on cameras from LUs sampled in 2021-2022 
+
+* <span style = "color: #7B0F17;">**OSM_ind_det_2022.csv**</span>;  contains independent detections for species detected on cameras from LUs sampled in 2022-2023  
+
+* <span style = "color: #7B0F17;">**OSM_proportional_detections_2021.csv**</span>;  contains proportional monthly presence/absences data for a subset of mammals detected on cameras from LUs sampled in 2021-2022  
+
+* <span style = "color: #7B0F17;">**OSM_proportional_detections_2022.csv**</span>;  contains proportional monthly presence/absences data for a subset of mammals detected on cameras from LUs sampled in 2022-2023  
+
+* <span style = "color: #7B0F17;">**OSM_proportional_detections_merged_2021_2022.csv**</span>;  contains proportional monthly presence/absences data for a subset of mammals detected on cameras from LUs sampled in 2021-2022 and 2022-2023   
+
+* <span style = "color: #7B0F17;">**OSM_timelapse_2021.csv**</span>; contains cleaned image data from program Timelapse for all species and LUs sampled in 2021-2022 (not formatted into independent detections)  
+
+* <span style = "color: #7B0F17;">**OSM_timelapse_2022.csv**</span>; contains cleaned image data from program Timelapse for all species and LUs sampled in 2022-2023 (not formatted into independent detections)  
+
+* <span style = "color: #7B0F17;">**OSM_total_detections_2022.csv**</span>; contains total independent detections for all species and LUs sampled in 2022-2023  
+
+* <span style = "color: #7B0F17;">**OSM_total_presence_absence_2022.csv**</span>; contains binary presence/absences (0s, 1s) for all species and LUs sampled in 2022-2023  
 
 
 */raw*  
-This folder includes raw data for the current year (2022-2023). 
+This folder includes raw data for the current year (2022-2023), and some for the previous year (2021-2022. 
 
-* <span style = "color: #7B0F17;">**data/raw/OSM_2022_Deployment_Data.csv**</span>; contains raw data pertaining to the deployment location, data, time, and functionality of the cameras used in the project.  
+* <span style = "color: #7B0F17;">**OSM_Deployment_Data_2022.csv**</span>; contains raw data pertaining to the deployment location, data, time, and functionality of the cameras used in the project  
 
-* <span style = "color: #7B0F17;">**data/raw/OSM_2022_Deployment_Site_Data.csv**</span>; contains raw data pertaining to the location, gps coordinates, date, time, and description of the sites where cameras were deployed for the project.  
+* <span style = "color: #7B0F17;">**OSM_Deployment_Site_Data_2021.csv**</span>; contains raw data pertaining to the location, gps coordinates, date, time, and description of the sites where cameras were deployed for 2021-2022 
 
-* <span style = "color: #7B0F17;">**data/raw/OSM_LU01_LU13_LU15_HFI_2022.csv**</span>; contains raw data on human factor indices (HFI) for each site at varying buffer distances. 
+* <span style = "color: #7B0F17;">**OSM_Deployment_Site_Data_2022.csv**</span>; contains raw data pertaining to the location, gps coordinates, date, time, and description of the sites where cameras were deployed for 2022-2023  
 
-* <span style = "color: #7B0F17;">**data/raw/OSM_LU01_LU13_LU15_VEG_2022.csv**</span>; contains raw data on land cover for each site at varying buffer distances. 
+* <span style = "color: #7B0F17;">**OSM_LU01_LU13_LU15_HFI_2022_2024-04-19.csv**</span>; contains raw data on Human Footprint Inventory (HFI) for each site sampled in 2022-2023 at varying buffer distances  
+
+* <span style = "color: #7B0F17;">**OSM_LU01_LU13_LU15_VEG_2022_2024-04-19.csv**</span>; contains raw data on land cover for each site sampled in 2022-2023 at varying buffer distances  
 
 
-*/processed*  
-This folder includes data for the current year (2022-2023) that has been cleaned and reformatted using scripts within this repository.   
+*Files in data deposit folder*
+This folder includes data and relevant files needed for an internal (OSM TBM) data deposit requested by Tobi Oke in 2024. It is maintained in this folder in case future data deposits are required, ACME has a template to work from of what the files structure should look like. This entire folder was zipped and sent to Tobi Oke. 
 
-* <span style = "color: #7B0F17;">**data/processed/OSM_2022_idv_det.csv**</span>; contains cleaned data on independent detections (30 minutes apart) for each species and all landscape units.  
+* <span style = "color: #7B0F17;">**00_README**</span>; readme file for viewing by data requisitor (.html) or editing by ACME (.md) 
 
-* <span style = "color: #7B0F17;">**data/processed/OSM_2022_timelapse.csv**</span>; contains cleaned image data from timelapse for all species and landscape units (not formatted into independent detections).  
+* <span style = "color: #7B0F17;">**01_ACME_Camera_Image_processing_Protocol.pdf**</span>; document that describes how metadata are defined and entered for raw image data in Timelapse 
+
+* <span style = "color: #7B0F17;">**OSM_ABMI_covariates_grouping_table**</span>; document defining how HFI covariates from ABMI wall-to-wall data were grouped in the the data submitted with this data deposit 
+
+* <span style = "color: #7B0F17;">**OSM_camera_data_2021-2022.csv**</span>; contains cleaned image and camera deployment data for LUs sampled in 2021-2022 and 2022-2023  
+
+* <span style = "color: #7B0F17;">**OSM_landscape_data_2021-2022.csv**</span>; contains cleaned, formatted, and group HFI and land cover data from ABMI wall-to-wall data sets for sites sampled between 2021-2022 and 2022-2023  
+
+
+*Files in figures folder*
+
 
 
 *Files in scripts folder*

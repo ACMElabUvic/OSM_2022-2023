@@ -1278,7 +1278,8 @@ For plotting and formatting proportional monthly detections we need to create a 
                     'Red fox',
                     'White-tailed deer',
                     'Wolverine',
-                    'Snowshoe hare' # this one was added for ES 482/582 class data, we don't normally use for OSM reports
+                    'Snowshoe hare', # this one was added for ES 482/582 class data, we don't normally use for OSM reports
+                    'Red squirrel' # this one was added for ES 482/582 class data, we don't normally use for OSM reports
                     )
 ```
 
@@ -1585,12 +1586,12 @@ proportional_detections <- as.data.frame(proportional_detections)
 
 # create a vector of the species columns for the loop
 # use all species columns (this value may change year to year)
-cols <- 2:13
+cols <- 2:14
 
 for (col in cols) {
-  if (is.numeric(proportional_detections[,col]) & is.numeric(proportional_detections[,14])) 
+  if (is.numeric(proportional_detections[,col]) & is.numeric(proportional_detections[,15])) 
     {new_col_name <- paste0("absent_", colnames(proportional_detections)[col])
-    proportional_detections[new_col_name] <- proportional_detections[,14] - proportional_detections[,col]
+    proportional_detections[new_col_name] <- proportional_detections[,15] - proportional_detections[,col]
   }
 }
 
