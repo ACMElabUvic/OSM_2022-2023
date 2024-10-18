@@ -2,11 +2,13 @@
 title: "OSM Figures 2021-2022"
 author: "Marissa Dyck"
 date: "2024-10-03"
-output: 
+output:
+  pdf_document:
+    toc: true
   html_document:
     theme: journal
-    toc: yes
-    toc_float: yes
+    toc: true
+    toc_float: true
 ---
 
 The first two chunks of this r markdown file after the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
@@ -81,6 +83,7 @@ install.packages('ggpubr')
 install.packages('rphylopic')
 install.packages('broom')
 install.packages('grid')
+devtools::install_github("JLSteenwyk/ggpubfigs")
 ```
 
 ## Load libraries
@@ -94,6 +97,7 @@ library(ggpubr) # make modifications to plot for publication (arrange plots)
 library(rphylopic) # add animal silhouettes to graphs
 library(broom) # extracting odds ratios in a tidy format
 library(grid)
+library(ggpubfigs)
 ```
 # Data
 
@@ -570,6 +574,7 @@ The first option is simple because we already have the 3 plots generated from ea
 
 #### Plot
 
+I decided I like the second option better so have not updated this plot
 
 ```{r figure 2 option 1}
 
@@ -662,7 +667,10 @@ ggplot(buffer_data_long, aes(x = species,
   guides(fill = guide_legend(override.aes = list(size = 5))) +
   
   scale_fill_manual('Analysis',
-                    values = c('black','cadetblue3', 'palegreen4'),
+                    # not colorblind friendly colors
+                    # values = c('black','cadetblue3', 'palegreen4'), 
+                    # colorblind friendly palette
+                    values = friendly_pal('contrast_three'),
                     labels = c('Anthropogenic', 'Global', 'Landscape')) +
   labs(x = 'Species',
        y = 'Buffer width (meters)') +
@@ -680,10 +688,10 @@ ggplot(buffer_data_long, aes(x = species,
   theme_bw() +
   theme(legend.key.size = unit(0.01, 'cm'),
         panel.grid.minor = element_blank(),
-        axis.text = element_text(size = 15),
-        axis.title = element_text(size = 17),
-        legend.title = element_text(size = 17),
-        legend.text = element_text(size = 15))
+        axis.text = element_text(size = 18),
+        axis.title = element_text(size = 20),
+        legend.title = element_text(size = 20),
+        legend.text = element_text(size = 18))
 
 figure_2_b
 ```
@@ -743,7 +751,10 @@ ggplot(body_size_data_long, aes(x = log_body_size,
   guides(fill = guide_legend(override.aes = list(size = 5))) +
   
   scale_fill_manual('Analysis',
-                    values = c('black','cadetblue3', 'palegreen4'),
+                    # not colorblind friendly colors
+                    # values = c('black','cadetblue3', 'palegreen4'), 
+                    # colorblind friendly palette
+                    values = friendly_pal('contrast_three'),
                     labels = c('Anthropogenic', 'Global', 'Landscape')) +
   labs(x = 'Log body size (kg)',
        y = 'Buffer width (meters)') +
@@ -779,3 +790,217 @@ ggsave('figures/publication_figures/figure_3.jpg',
        dpi = 600)
 ```
 
+
+## Supporting information figures
+
+For the supporting information, we want a figure that depicts the model selection results from each analysis so we can see if there is a range of similar values that encompass most of the weight for each species
+
+To do this we need a data frame with the results from the model selection for each analysis and each species. I generated exactly this file in the last script 3_OSM_glm_analysis_2022.rmd and saved it to the data processed folder so we can read it in now
+
+### Data
+
+There is a separate csv file for each analysis but they are all stored in the data processed folder so we can upload all 3 at the same time as a list element to work with later
+
+```{r model.sel data}
+
+osm_model_sel_data <- file.path('data/processed/',
+                                
+                                # provide list of files
+                                c('osm_glm_global_model_sel_data.csv',
+                                  'osm_glm_anthro_model_sel_data.csv',
+                                  'osm_glm_land_model_sel_data.csv')) %>% 
+  
+  # use purrr::map to read them all in
+  map(~.x %>%
+        read_csv(.,
+                 
+                 col_types = cols(Model = col_factor(),
+                                  species = col_factor())) %>% 
+        
+        # remove some text from model names
+        mutate(Model = str_replace(Model, " meter buffer", ""),
+               Model = as.numeric(Model))) %>% 
+  
+  # name each list element according to the analysis
+  purrr::set_names('global',
+                   'anthro',
+                   'land')
+  
+
+
+```
+
+Let's take a look at one of the data files to make sure it's all set to work with. 
+
+The main columns we carea bout are the model name, weight, and species
+
+```{r model_sel data}
+
+str(osm_model_sel_data$global)
+```
+Looks good enough for plotting
+
+
+### Species labels
+
+For these plots I want to customize the species labels so they are cleaner, here I am generating a vector of the names I will use in the following 3 plots
+```{r species labels}
+
+species_labels <- c(
+  bear = 'Black bear',
+  caribou = 'Mountain Caribou',
+  coyote = 'Coyote',
+  fisher = 'Fisher',
+  wolf = ' Grey Wolf',
+  lynx = 'Canadian Lynx',
+  moose = 'Moose',
+  fox = 'Red Fox',
+  deer = 'White-tailed Deer')
+
+```
+
+
+### Figure S1
+
+```{r fig s1}
+
+figs1 <- 
+  
+  ggplot(osm_model_sel_data$global, 
+         aes(x = Model,
+             y = weight)) +
+  
+  # add points for each buffer size
+  geom_point() +
+  
+  # make indv plots for each species
+  facet_wrap(~species,
+             labeller = as_labeller(species_labels)) +
+  
+  # x axis breaks
+  scale_x_continuous(breaks = seq(250, 5000, by= 250)) +
+  
+  # format axis labels
+  labs(x = 'Buffer width (meters)',
+       y = 'Model weight',
+       title = 'Global models') +
+  
+  # format theme elements of graph
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  size = 22),
+        axis.text.x = element_text(angle = 90),
+        axis.title.x = element_text(margin = margin(t = 15)),
+        axis.text = element_text(size = 16),
+        axis.title = element_text(size = 20),
+        strip.text = element_text(size = 16))  # Adjust the text size of facet labels
+
+figs1
+```
+Now lets save this plot
+
+```{r save fig s1}
+
+ggsave('figures/publication_figures/figure_S1.jpg',
+       figs1,
+       height = 12,
+       width = 15,
+       units = 'in',
+       dpi = 600
+       )
+```
+
+
+
+### Figure S2
+
+Now we repeat for the anthropogenic models
+
+```{r fig s2}
+
+figs2 <- 
+  
+  ggplot(osm_model_sel_data$anthro, 
+         aes(x = Model,
+             y = weight)) +
+  
+  # add points for each buffer size
+  geom_point() +
+  
+  # make indv plots for each species
+  facet_wrap(~species,
+             labeller = as_labeller(species_labels)) +
+  
+  # x axis breaks
+  scale_x_continuous(breaks = seq(250, 5000, by= 250)) +
+  
+  # format axis labels
+  labs(x = 'Buffer width (meters)',
+       y = 'Model weight',
+       title = 'Anthropogenic models') +
+  
+  # format theme elements of graph
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  size = 22),
+        axis.text.x = element_text(angle = 90),
+        axis.title.x = element_text(margin = margin(t = 15)),
+        axis.text = element_text(size = 16),
+        axis.title = element_text(size = 20),
+        strip.text = element_text(size = 16))  # Adjust the text size of facet labels
+
+figs2
+```
+
+### Figure S3
+
+And repeat again for the landscape models. We could probably have found a way to do this in purrr but oh well.
+
+```{r fig s3}
+
+figs3 <- 
+  
+  ggplot(osm_model_sel_data$land, 
+         aes(x = Model,
+             y = weight)) +
+  
+  # add points for each buffer size
+  geom_point() +
+  
+  # make indv plots for each species
+  facet_wrap(~species,
+             labeller = as_labeller(species_labels)) +
+  
+  # x axis breaks
+  scale_x_continuous(breaks = seq(250, 5000, by= 250)) +
+  
+  # format axis labels
+  labs(x = 'Buffer width (meters)',
+       y = 'Model weight',
+       title = 'Landscape models') +
+  
+  # format theme elements of graph
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5,
+                                  size = 22),
+        axis.text.x = element_text(angle = 90),
+        axis.title.x = element_text(margin = margin(t = 15)),
+        axis.text = element_text(size = 16),
+        axis.title = element_text(size = 20),
+        strip.text = element_text(size = 16))  # Adjust the text size of facet labels
+
+figs3
+```
+
+Now lets save this plot
+
+```{r save fig s3}
+
+ggsave('figures/publication_figures/figure_S3.jpg',
+       figs3,
+       height = 12,
+       width = 15,
+       units = 'in',
+       dpi = 600
+       )
+```

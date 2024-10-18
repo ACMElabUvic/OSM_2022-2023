@@ -2,11 +2,13 @@
 title: "OSM report 2022-2023"
 author: "Marissa Dyck"
 date: "2024-05-08"
-output: 
+output:
+  pdf_document:
+    toc: true
   html_document:
     theme: journal
-    toc: yes
-    toc_float: yes
+    toc: true
+    toc_float: true
 ---
 
 The first two chunks of this r markdown file after the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
@@ -957,7 +959,17 @@ We will use the `model.sel()` function from the *MuMIn* package to compare the g
 
 ```{r black bear mod selection}
 
-model.sel(black_bear_mods)
+# run model selection and save the results as a tibble for graphing use later
+black_bear_global_model.sel <- model.sel(black_bear_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+black_bear_global_model.sel
 
 ```
 
@@ -1273,8 +1285,17 @@ caribou_mods <- osm_final_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# model selection
-model.sel(caribou_mods)
+# run model selection and save the results as a tibble for graphing use later
+caribou_global_model.sel <- model.sel(caribou_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+caribou_global_model.sel
 ```
 
 We get a warning that there are some model convergence problems, I expect this is because we don't have enough data for caribou, so we may choose to remove the caribou results from the manuscript or provide that caveat.
@@ -1338,8 +1359,18 @@ coyote_mods <- osm_final_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# model selection
-model.sel(coyote_mods)
+
+# run model selection and save the results as a tibble for graphing use later
+coyote_global_model.sel <- model.sel(coyote_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+coyote_global_model.sel
 ```
 
 > Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for coyote did change (2250-5000). As with caribou this result is also more similar to the top anthro model (4750m)
@@ -1399,8 +1430,18 @@ fisher_mods <- osm_final_df_2021_2022 %>%
                         (1|array),
                    data = .,
                    family = 'binomial'))
-# model selection
-model.sel(fisher_mods)
+
+# run model selection and save the results as a tibble for graphing use later
+fisher_global_model.sel <- model.sel(fisher_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+fisher_global_model.sel
 ```
 
 > Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for fisher did not change but the weight did increase (0.266 - 0.526)
@@ -1462,8 +1503,17 @@ wolf_mods <- osm_final_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# model selection
-model.sel(wolf_mods)
+# run model selection and save the results as a tibble for graphing use later
+wolf_global_model.sel <- model.sel(wolf_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+wolf_global_model.sel
 ```
 
 > Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for wolf did change (500 - 3500), as with coyote and caribou this is more similar to top anthro modelthan it was before AND actually the same as the landscape model
@@ -1525,8 +1575,18 @@ lynx_mods <- osm_final_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# model selection
-model.sel(lynx_mods)
+# run model selection and save the results as a tibble for graphing use later
+# run model selection and save the results as a tibble for graphing use later
+lynx_global_model.sel <- model.sel(lynx_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+lynx_global_model.sel
 ```
 
 > Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for lynx did change (1250 - 250), as with others this is more similar to top anthro model (acutally the same as anthro model).
@@ -1589,8 +1649,17 @@ moose_mods <- osm_final_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# model selection
-model.sel(moose_mods)
+# run model selection and save the results as a tibble for graphing use later
+moose_global_model.sel <- model.sel(moose_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+moose_global_model.sel
 ```
 
 > Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for moose did not change but the weight did increase (0.504 - 0.941). This top model is the same as the landscape model.
@@ -1652,8 +1721,17 @@ fox_mods <- osm_final_df_2021_2022 %>%
                    family = 'binomial'))
 
 
-# model selection
-model.sel(fox_mods)
+# run model selection and save the results as a tibble for graphing use later
+fox_global_model.sel <- model.sel(fox_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+fox_global_model.sel
 
 ```
 
@@ -1718,8 +1796,17 @@ deer_mods <- osm_final_df_2021_2022 %>%
                    family = 'binomial'))
 
 
-# model selection
-model.sel(deer_mods)
+# run model selection and save the results as a tibble for graphing use later
+deer_global_model.sel <- model.sel(deer_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_final_df_2021_2022)))
+
+# look at model selection results
+deer_global_model.sel
 ```
 
 > Note about re-run global models: when we re-ran the global models with dropped correlated variables our top model for deer did not change but the weight dropped (0.974 - 0.234). This top model is the same as the landscape model.
@@ -1754,7 +1841,7 @@ For convenience here is a list of the top buffer widths for each species
 * Red fox - 4750    
 * White-tailed deer - 1500m  
 
-**Re-run**    
+**Re-run** (without correlated variables)        
 * Black bear - 250m   
 * Caribou - 1000m   
 * Coyote - 5000m    
@@ -1766,6 +1853,41 @@ For convenience here is a list of the top buffer widths for each species
 * White-tailed deer - 1500m   
 
 
+
+I also want to create a data frame with the model.sel outputs from each species so I can plot these results later
+
+```{r global model.sel data}
+
+# provide list of model.sel data frames from global analysis
+
+global_model.sel_data <- list(
+  bear = black_bear_global_model.sel,
+  caribou = caribou_global_model.sel,
+  coyote = coyote_global_model.sel,
+  fisher = fisher_global_model.sel,
+  wolf = wolf_global_model.sel,
+  lynx = lynx_global_model.sel,
+  moose = moose_global_model.sel,
+  fox = fox_global_model.sel,
+  deer = deer_global_model.sel
+) %>% 
+  
+  # use purrr to combine data and extract species names to use as a column
+  map_dfr(~.x %>% 
+            
+            mutate(species = deparse(substitute(.x))), 
+          .id = "species")
+
+```
+
+
+And save this for use later
+
+```{r save global model.sel data}
+
+write_csv(global_model.sel_data,
+          'data/processed/OSM_glm_global_model_sel_data.csv')
+```
 
 
 # Analysis Prep
@@ -2103,7 +2225,17 @@ bear_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
+# run model selection and save the results as a tibble for graphing use later
+bear_anthro_model.sel <- model.sel(bear_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
 
+# look at model selection results
+bear_anthro_model.sel
 ```
 
 
@@ -2187,8 +2319,17 @@ caribou_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(caribou_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+caribou_anthro_model.sel <- model.sel(caribou_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+caribou_anthro_model.sel
 
 ```
 Let's look at the summary for the top model
@@ -2225,8 +2366,17 @@ coyote_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(coyote_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+coyote_anthro_model.sel <- model.sel(coyote_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+coyote_anthro_model.sel
 
 ```
 ```{r coyote anthro model summary}
@@ -2261,8 +2411,17 @@ fisher_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(fisher_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+fisher_anthro_model.sel <- model.sel(fisher_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+fisher_anthro_model.sel
 
 ```
 
@@ -2299,8 +2458,17 @@ wolf_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(wolf_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+wolf_anthro_model.sel <- model.sel(wolf_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+wolf_anthro_model.sel
 
 ```
 ```{r wolf anthro model summary}
@@ -2336,8 +2504,17 @@ lynx_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(lynx_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+lynx_anthro_model.sel <- model.sel(lynx_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+lynx_anthro_model.sel
 
 ```
 ```{r lynx anthro model summary}
@@ -2372,8 +2549,17 @@ moose_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(moose_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+moose_anthro_model.sel <- model.sel(moose_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+moose_anthro_model.sel
 
 ```
 
@@ -2410,8 +2596,17 @@ fox_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(fox_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+fox_anthro_model.sel <- model.sel(fox_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+fox_anthro_model.sel
 
 ```
 
@@ -2448,8 +2643,17 @@ deer_anthro_mods <- osm_anthro_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(deer_anthro_mods)
+# run model selection and save the results as a tibble for graphing use later
+deer_anthro_model.sel <- model.sel(deer_anthro_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+deer_anthro_model.sel 
 
 ```
 
@@ -2457,6 +2661,45 @@ model.sel(deer_anthro_mods)
 
 summary(deer_anthro_mods$`1500 meter buffer`)
 ```
+
+### Save model results
+
+We also want to save the output from the model.sel funciton for each species as one csv file for use plotting later like we did with the global analysis
+
+```{r anthro model.sel data}
+
+# provide list of model.sel data frames from global analysis
+
+anthro_model.sel_data <- list(
+  bear = bear_anthro_model.sel,
+  caribou = caribou_anthro_model.sel,
+  coyote = coyote_anthro_model.sel,
+  fisher = fisher_anthro_model.sel,
+  wolf = wolf_anthro_model.sel,
+  lynx = lynx_anthro_model.sel,
+  moose = moose_anthro_model.sel,
+  fox = fox_anthro_model.sel,
+  deer = deer_anthro_model.sel
+) %>% 
+  
+  # use purrr to combine data and extract species names to use as a column
+  map_dfr(~.x %>% 
+            
+            mutate(species = deparse(substitute(.x))), 
+          .id = "species")
+
+```
+
+
+And save this for use later
+
+```{r save anthro model.sel data}
+
+write_csv(anthro_model.sel_data,
+          'data/processed/OSM_glm_anthro_model_sel_data.csv')
+
+```
+
 
 
 ## Landscape
@@ -2488,8 +2731,18 @@ bear_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(bear_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+bear_land_model.sel <- model.sel(bear_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+bear_land_model.sel 
+
 
 ```
 
@@ -2521,8 +2774,18 @@ caribou_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(caribou_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+caribou_land_model.sel <- model.sel(caribou_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+caribou_land_model.sel 
+
 
 ```
 
@@ -2554,8 +2817,18 @@ coyote_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(coyote_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+coyote_land_model.sel <- model.sel(coyote_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+coyote_land_model.sel 
+
 
 ```
 
@@ -2588,8 +2861,18 @@ fisher_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(fisher_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+fisher_land_model.sel <- model.sel(fisher_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+fisher_land_model.sel 
+
 
 ```
 
@@ -2622,8 +2905,18 @@ wolf_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(wolf_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+wolf_land_model.sel <- model.sel(wolf_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+wolf_land_model.sel 
+
 
 ```
 
@@ -2656,8 +2949,18 @@ lynx_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(lynx_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+lynx_land_model.sel <- model.sel(lynx_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+lynx_land_model.sel 
+
 
 ```
 
@@ -2690,8 +2993,18 @@ moose_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(moose_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+moose_land_model.sel <- model.sel(moose_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+moose_land_model.sel 
+
 
 ```
 
@@ -2724,8 +3037,18 @@ fox_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(fox_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+fox_land_model.sel <- model.sel(fox_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+fox_land_model.sel 
+
 
 ```
 
@@ -2758,10 +3081,59 @@ deer_land_mods <- osm_landscape_df_2021_2022 %>%
                    data = .,
                    family = 'binomial'))
 
-# run model selection
-model.sel(deer_land_mods)
+# run model selection and save the results as a tibble for graphing use later
+deer_land_model.sel <- model.sel(deer_land_mods) %>% 
+  
+  as.data.frame() %>% 
+  
+  rownames_to_column(var = 'Model')  %>%
+  
+  mutate(Dataset = deparse(substitute(osm_anthro_df_2021_2022)))
+
+# look at model selection results
+deer_land_model.sel 
+
 
 ```
+
+### Save model results
+
+We also want to save the output from the model.sel funciton for each species as one csv file for use plotting later like we did with the previous analyses
+
+```{r land model.sel data}
+
+# provide list of model.sel data frames from global analysis
+
+land_model.sel_data <- list(
+  bear = bear_land_model.sel,
+  caribou = caribou_land_model.sel,
+  coyote = coyote_land_model.sel,
+  fisher = fisher_land_model.sel,
+  wolf = wolf_land_model.sel,
+  lynx = lynx_land_model.sel,
+  moose = moose_land_model.sel,
+  fox = fox_land_model.sel,
+  deer = deer_land_model.sel
+) %>% 
+  
+  # use purrr to combine data and extract species names to use as a column
+  map_dfr(~.x %>% 
+            
+            mutate(species = deparse(substitute(.x))), 
+          .id = "species")
+
+```
+
+
+And save this for use later
+
+```{r save land model.sel data}
+
+write_csv(land_model.sel_data,
+          'data/processed/OSM_glm_land_model_sel_data.csv')
+
+```
+
 
 > In summary it does matter whether you are looking at landscape or anthropogenic features which spatial scale you use. Only two species (lynx and moose) had spatial scales for both top models within 1000m (1km). There were also more well-defined top models (delta AIC greater than 2.00) when you subset data to specifically look at anthro or landscape features. 
 

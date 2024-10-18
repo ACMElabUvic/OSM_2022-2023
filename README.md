@@ -1,7 +1,7 @@
 ---
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 # OSM_2022-2023
 This repository contains data, R scripts and associated outputs, and other materials necessary for the Applied Conservation and Macro Ecology (ACME) lab's Oil Sands Monitoring project for the 2022-2023 season.
@@ -94,7 +94,8 @@ This folder includes raw data for the current year (2022-2023), and some for the
 * <span style = "color: #7B0F17;">**OSM_LU01_LU13_LU15_VEG_2022_2024-04-19.csv**</span>; contains raw data on land cover for each site sampled in 2022-2023 at varying buffer distances  
 
 
-*Files in data deposit folder*
+*Files in data deposit folder*    
+
 This folder includes data and relevant files needed for an internal (OSM TBM) data deposit requested by Tobi Oke in 2024. It is maintained in this folder in case future data deposits are required, ACME has a template to work from of what the files structure should look like. This entire folder was zipped and sent to Tobi Oke. 
 
 * <span style = "color: #7B0F17;">**00_README**</span>; readme file for viewing by data requisitor (.html) or editing by ACME (.md) 
@@ -108,14 +109,100 @@ This folder includes data and relevant files needed for an internal (OSM TBM) da
 * <span style = "color: #7B0F17;">**OSM_landscape_data_2021-2022.csv**</span>; contains cleaned, formatted, and group HFI and land cover data from ABMI wall-to-wall data sets for sites sampled between 2021-2022 and 2022-2023  
 
 
-*Files in figures folder*
+*Files in figures folder*   
+
+This folder contains various plots generated in the scripts of this repository for the purposes of data visualization.  
+
+* <span style = "color: #7B0F17;">**OSM_body_size_buffers_2022.jpg**</span>; plot depicting the top buffer size for each species from the global models; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_detections LU01.jpg**</span>; plot depicting the number of independent detections per species for LU 01; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script 
+
+* <span style = "color: #7B0F17;">**OSM_detections LU02.jpg**</span>; plot depicting the number of independent detections per species for LU 02; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script   
+
+* <span style = "color: #7B0F17;">**OSM_detections LU03.jpg**</span>; plot depicting the number of independent detections per species for LU 03; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script   
+
+* <span style = "color: #7B0F17;">**OSM_detections LU13.jpg**</span>; plot depicting the number of independent detections per species for LU 13; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script   
+
+* <span style = "color: #7B0F17;">**OSM_detections LU15.jpg**</span>; plot depicting the number of independent detections per species for LU 15; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script   
+
+* <span style = "color: #7B0F17;">**OSM_detections LU21.jpg**</span>; plot depicting the number of independent detections per species for LU 21; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script   
+
+* <span style = "color: #7B0F17;">**OSM_ind_det_per_LU_2022.jpg**</span>; plot depicting the number of independent detections per species for the 4 LUs sampled in 2022-2023; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_LU01_det_occ_plots.jpg**</span>; plot depicting the number of independent detections and naive occupancy per species for LU 01; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_LU02_det_occ_plots.jpg**</span>; plot depicting the number of independent detections and naive occupancy per species for LU 02; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script    
+
+* <span style = "color: #7B0F17;">**OSM_LU03_det_occ_plots.jpg**</span>; plot depicting the number of independent detections and naive occupancy per species for LU 03; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_LU13_det_occ_plots.jpg**</span>; plot depicting the number of independent detections and naive occupancy per species for LU 13; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_LU15_det_occ_plots.jpg**</span>; plot depicting the number of independent detections and naive occupancy per species for LU 15; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_LU21_det_occ_plots.jpg**</span>; plot depicting the number of independent detections and naive occupancy per species for LU 21; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_Naive Occupancy LU01.jpg**</span>; plot depicting the naive occupancy per species for LU 01; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_Naive Occupancy LU02.jpg**</span>; plot depicting the naive occupancy per species for LU 02; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_Naive Occupancy LU03.jpg**</span>; plot depicting the naive occupancy per species for LU 03; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script    
+
+* <span style = "color: #7B0F17;">**OSM_Naive Occupancy LU13.jpg**</span>; plot depicting the naive occupancy per species for LU 13; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script    
+
+* <span style = "color: #7B0F17;">**OSM_Naive Occupancy LU15.jpg**</span>; plot depicting the naive occupancy per species for LU 15; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script    
+
+* <span style = "color: #7B0F17;">**OSM_Naive Occupancy LU21.jpg**</span>; plot depicting the naive occupancy per species for LU 21; generated in the <span style = "color: #7B0F17;"> 3_OSM_glm_analysis_2022.rmd </span> script    
+
+* <span style = "color: #7B0F17;">**OSM_proportional_detections_2022.jpg**</span>; plot depicting the response metric (months present) for each species for each site in the 4 LUs sampled in 2022-2023; generated in the <span style = "color: #7B0F17;"> 1_ACME_camera_script_2024-05-06..rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_species_anthro_buffers_2022.jpg**</span>; plot depicting the top buffer for each species in the anthropogenic analysis; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_species_global_buffers_2022.jpg**</span>; plot depicting the top buffer for each species in the global analysis; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script   
+
+* <span style = "color: #7B0F17;">**OSM_species_land_buffers_2022.jpg**</span>; plot depicting the top buffer for each species in the landscape analysis; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_total_detections_site_2022.jpg**</span>; plot depicting the response metric  (total independent detections) for each species for each site in the 4 LUs sampled in 2022-2023; generated in the <span style = "color: #7B0F17;"> 1_ACME_camera_script_2024-05-06.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**OSM_total_presence_absence_2022.jpg**</span>; plot depicting the response metric(binary presence/absence) for each species for each site in the 4 LUs sampled in 2022-2023; generated in the <span style = "color: #7B0F17;"> 1_ACME_camera_script_2024-05-06.rmd </span> script  
+
+
+/publication_figures  
+
+This sub folder contains final publication quality figures for the scale analysis conducted in this repository.    
+
+* <span style = "color: #7B0F17;">**figure_2_a.jpg**</span>; plot with three panels, each depicting the top buffer sizes for each species for one of the models run in the 3_OSM_glm_analysis.rmd script; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**figure_2_b.jpg**</span>; plot depicting the top buffer sizes for each species for the 3 analysis run 3_OSM_glm_analysis.rmd script, with points color coded by model type; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**figure_3.jpg**</span>; plot depicting the top buffer sizes for each species based on log body size for the 3 analysis run 3_OSM_glm_analysis.rmd script, with points color coded by model type; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script    
+
+* <span style = "color: #7B0F17;">**figure_S1.jpg**</span>; plot depicting the model weights for all models (buffer widths) for each species for the global analysis; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**figure_S2.jpg**</span>; plot depicting the model weights for all models (buffer widths) for each species for the anthropogenic analysis; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script  
+
+* <span style = "color: #7B0F17;">**figure_S3.jpg**</span>; plot depicting the model weights for all models (buffer widths) for each species for the landscape analysis; generated in the <span style = "color: #7B0F17;"> 4_OSM_glm_figures_2022.rmd </span> script  
 
 
 
-*Files in scripts folder*
+*Files in scripts folder* 
+
+This file contains the various scripts needed for data formatting, visualization, and analysis.   
+
+* <span style = "color: #7B0F17;">**0_ACME_read_timelapse_script-2024-04-04**</span>; .rmd file and knitted .html file that will take all of the individual imagery folders and move them to a common location in the ACME Netdrive  
+
+* <span style = "color: #7B0F17;">**1_ACME_camera_script-2024-05-06**</span>; .rmd file and knitted .html/.pdf files for data cleaning and formatting 
+
+* <span style = "color: #7B0F17;">**2_ACME_landscape_covariate_exploration_script**</span>; .rmd file and knitted .html/.pdf files for further data cleaning, formatting, and exploration of the covariate (HFI and land cover) data 
+
+* <span style = "color: #7B0F17;">**3_OSM_glm_analaysis_2022**</span>; .rmd file and knitted .html/.pdf files for running th GLMM anaylsis to look at top buffer scales for nine species of mammals  
+
+* <span style = "color: #7B0F17;">**4_OSM_glm_figures_2022**</span>; .rmd file and knitted .html/.pdf files for making the publication quality figures   
 
 
-### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/raw/OSM_2022_Deployment_Data.csv</span>]  
+
+## RAW DATA   
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;"> OSM_2022_Deployment_Data.csv</span>]  
 
 * **Number of variables/columns:** 6
 * **Number of observations/rows:** 155 (one per camera site) 
@@ -135,7 +222,59 @@ This folder includes data and relevant files needed for an internal (OSM TBM) da
 * <span style = "color: #2274A5;">**Camera.Failure.Details**</span>, character describing any issues with the camera during deployment. 
 
 
-### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/raw/OSM_2022_Deployment_Site_Data.csv</span>]
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_Deployment_Site_Data_2021.csv</span>]
+
+* **Number of variables/columns:** 21
+* **Number of observations/rows:** 79 (one per camera site)
+
+**Variable List:**
+
+* <span style = "color: #2274A5;">**Array**</span>, a factor with 2 levels where the first element abbreviation describes the project (e.g. OSM for Oil Sands Monitoring) and the second describes the landscape unit. 
+
+* <span style = "color: #2274A5;">**DeployDate**</span>, date indicating when the camera was deployed.   
+
+* <span style = "color: #2274A5;">**Deploy Time**</span>, time (in 24hrs) indicating when the camera was deployed.   
+
+* <span style = "color: #2274A5;">**Crew**</span>, factor with the initials of the crew who deployed the camera.   
+
+* <span style = "color: #2274A5;">**Grid Cell #**</span>, a factor with 79 levels where the first element abbreviation describes the landscape unit (i.e. LU02 or LU03) and the second element describes the camera site.  
+
+* <span style = "color: #2274A5;">**Camera Site #**</span>, [same as Grid Cell #] - factor where the first element abbreviation describes the landscape unit (i.e. LU13, LU15, LU21, or LU01) and the second element describes the camera site.  
+
+* <span style = "color: #2274A5;">**Camera Unit #**</span>, a unique character identifier for the camera unit that was deployed. 
+
+* <span style = "color: #2274A5;">**SD Card #**</span>, a unique character identifier for the SD card that was deployed with the camera unit.  
+
+* <span style = "color: #2274A5;">**Lat**</span>, numeric latitudinal geographic coordinates for the camera location.   
+
+* <span style = "color: #2274A5;">**Long**</span>, numeric longitudinal geographic coordinates for the camera location. 
+
+* <span style = "color: #2274A5;">**GPS Label**</span>, factor with 79 levels where the first element abbreviation describes the landscape unit (i.e. LU13, LU15, LU21, or LU01) and the second element describes the camera site. 
+
+* <span style = "color: #2274A5;">**Forest Type**</span>, factor with 2 levels describing the type of forest at the camera site (i.e. Broadleaf, Mixed, Conifer, or Coniferous).  
+
+* <span style = "color: #2274A5;">**Camera Site Description**</span>, brief description characterizing the habitat of the camera site, completed by the technicians who deployed the camera at the camera site 
+
+* <span style = "color: #2274A5;">**Topography**</span>, a factor with 3 levels describing the topography of the camera site (i.e. Flat, Slope, or Ridge). 
+
+* <span style = "color: #2274A5;">**Grade (%)**</span>, a numeric measurement of the slop (incline/decline) of the camera site. 
+
+* <span style = "color: #2274A5;">**Elevation (m)**</span>, a numeric measurement of the elevation in meters of the camera site.   
+
+* <span style = "color: #2274A5;">**Distance to Trail (m)**</span>, a numeric measurement of the distance to the nearest trail in meters.  
+
+* <span style = "color: #2274A5;">**Camera Direction**</span>, a factor with 8 levels indication the cardinal direction the camera was pointed (i.e. NE, N, NW, W, E, SE, S, SW). 
+
+* <span style = "color: #2274A5;">**Trail Use Rating**</span>, a factor with 3 levels indicating the trail use (1 low, 3 high) of the animal trail the camera was deployed near  
+
+* <span style = "color: #2274A5;">**Distance to Lure**</span>, a numeric measurement of the distance from the camera to the lure in meters. 
+
+* <span style = "color: #2274A5;">**Comments and Access Notes**</span>, a character with notes for the field crew.   
+
+
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_Deployment_Site_Data_2022.csv</span>]
 
 * **Number of variables/columns:** 21
 * **Number of observations/rows:** 155 (one per camera site)  
@@ -166,7 +305,7 @@ This folder includes data and relevant files needed for an internal (OSM TBM) da
 
 * <span style = "color: #2274A5;">**Forest Type**</span>, factor with 4 levels describing the type of forest at the camera site (i.e. Broadleaf, Mixed, Conifer, or Coniferous).  
 
-* <span style = "color: #2274A5;">**Camera Site Description**</span>, ???
+* <span style = "color: #2274A5;">**Camera Site Description**</span>, brief description characterizing the habitat of the camera site, completed by the technicians who deployed the camera at the camera site 
 
 * <span style = "color: #2274A5;">**Topography**</span>, a factor with 3 levels describing the topography of the camera site (i.e. Flat, Slope, or Ridge). 
 
@@ -178,14 +317,14 @@ This folder includes data and relevant files needed for an internal (OSM TBM) da
 
 * <span style = "color: #2274A5;">**Camera Direction**</span>, a factor with 8 levels indication the cardinal direction the camera was pointed (i.e. NE, N, NW, W, E, SE, S, SW). 
 
-* <span style = "color: #2274A5;">**Trail Use Rating**</span>, a factor ??
+* <span style = "color: #2274A5;">**Trail Use Rating**</span>, a factor with 3 levels indicating the trail use (1 low, 3 high) of the animal trail the camera was deployed near  
 
 * <span style = "color: #2274A5;">**Distance to Lure**</span>, a numeric measurement of the distance from the camera to the lure in meters. 
 
 * <span style = "color: #2274A5;">**Comments and Access Notes**</span>, a character with notes for the field crew.   
 
 
-### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/raw/OSM_LU01_LU13_LU15_LU21_HFI_2022.csv</span>]  
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_LU01_LU13_LU15_LU21_HFI_2022.csv</span>]  
 
 *Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*. 
 
@@ -365,7 +504,10 @@ Roughly square in shape clearing, roughly 90-120 meters wide (approximately 1 ha
 * <span style = "color: #2274A5;">**LC_class230**</span>, a numeric variable indicating the proportion of landcover class 230 within the buffer area. Landcover class 230 is defined as mixed forest.
 
 
-### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">data/processed/OSM_2022_covariates.csv</span>]  
+## Processed Data
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_2022_covariates.csv</span>]  
 
 *Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*. 
 
