@@ -192,6 +192,7 @@ summary(detections_merged)
 ```
 THe only NAs are in the timediff column which is what we expect since any of the first observations won't have a a value for timediff. If you are confused by this re-visit the 1_ACME_camera_script.
 
+
 ## Summary
 
 Some summaries of the merged detection data

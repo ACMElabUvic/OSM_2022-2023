@@ -3,12 +3,12 @@ title: "ACME camera script 9-2-2024"
 author: "Marissa A. Dyck"
 date: "2024-02-09"
 output:
-  pdf_document:
-    toc: true
   html_document:
     theme: journal
     toc: true
     toc_float: true
+  pdf_document:
+    toc: true
 ---
  
 > IMPORTANT the first two chunks of this r markdown file **after** the r setup allow for plot zooming, but it also means that the html file must be opened in a browser to view the document properly. When it knits in RStudio the preview will appear empty but the html when opened in a browser will have all the info and you can click on each plot to Zoom in on it. 
@@ -295,7 +295,24 @@ rm(deploy)
 
 We can check the length each camera was operating using the cleaned deployment data, this is important for calculating the proportional presence/absences for analysis later on so we need to make sure nothing looks inaccurate here.
 
-Let's plot the camera operability with `ggplot()` to look at this
+Let's first calculate the total number of days 
+
+```{r total camera days}
+
+deploy_fixed %>% 
+  
+  # first group by site to calculate days camera at each site was operating for
+  group_by(site) %>% 
+  
+  # subtract end date from start date to get total number of days (adding 1 to ensure start and end date included)
+  summarise(days_active = sum(end_date - start_date + 1)) %>% 
+  
+  # sum all the days
+  summarise(total_camera_days = sum(days_active))
+```
+
+
+Now let's plot the camera operability with `ggplot()` to look at this
 
 ```{r camera operability}
 
@@ -306,7 +323,7 @@ deploy_fixed <- read_csv('data/processed/OSM_deployment_2022.csv') %>%
   mutate(site = as.factor(site))
 
 # create graph of camera operability
-
+cam_op <- 
 ggplot(deploy_fixed, aes(color = array))+
   
   geom_segment(aes(x = start_date, 
@@ -314,9 +331,26 @@ ggplot(deploy_fixed, aes(color = array))+
                    y = site, 
                    yend = site)) +
   
-  theme(axis.text = element_text(size = 6))
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        legend.text = element_text(size = 14))
 
+cam_op
 ```
+
+Save figure
+
+```{r}
+ggsave('OSM_cam_op_2022_2023.jpg',
+       cam_op,
+       path = 'figures',
+       width = 14,
+       height = 12,
+       units = 'in',
+       dpi = 600
+       )
+```
+
 
 Something weird is happening with the end of one of the LU15 sites it has a later end date than the others by a lot. (This may not show up once the correction has been made to the raw data file). Let's plot just LU15 so we can see which site it is, it is probably a typo in the deployment data we will need to fix in the raw file.
 
@@ -713,11 +747,67 @@ write_csv(OSM_2022_data_fixed,
 
 ### Remove messy data
 
-We should also remove the messy data from the environemnt so we don't accidentall use it
+We should also remove the messy data from the environment so we don't accidentally use it
 
 ```{r remove OSM_2022_data}
 
 rm(OSM_2022_data)
+```
+
+## Image summaries
+
+Some info to report about the number of images per species 
+
+
+```{r}
+
+# total images
+# see observations in global environment
+
+# total images with something in them
+OSM_2022_data_fixed %>% 
+  
+  drop_na(species) %>% 
+  
+  summarise(non_blank_images = n())
+
+# images of wildlife id to species
+mammals_2022 <- OSM_2022_data_fixed %>% 
+  
+  filter(species %in% c('White-tailed deer',
+                        'Black bear',
+                        'Snowshoe hare',
+                        'Moose',
+                        'Coyote',
+                        'Fisher',
+                        'Red squirrel',
+                        'Marten',
+                        'Striped skunk',
+                        'Lynx',
+                        'Short-tailed weasel',
+                        'Grey wolf',
+                        'Red fox',
+                        'Cougar',
+                        'Procupine',
+                        'Otter',
+                        'Beaver',
+                        'Wolverine',
+                        'Caribou',
+                        'Long-tailed weasel'))
+         
+mammals_2022 %>% 
+  
+  summarise(images_of_mammals_to_species = n())
+  
+
+# species image summaries
+mammals_2022 %>% 
+  
+  group_by(species) %>% 
+  
+  summarise(count = n()) %>% 
+  
+  arrange(desc(count))
 ```
 
 

@@ -1,7 +1,7 @@
 ---
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 # OSM_2022-2023
 This repository contains data, R scripts and associated outputs, and other materials necessary for the Applied Conservation and Macro Ecology (ACME) lab's Oil Sands Monitoring project for the 2022-2023 season.
@@ -507,13 +507,209 @@ Roughly square in shape clearing, roughly 90-120 meters wide (approximately 1 ha
 ## Processed Data
 
 
-### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_2022_covariates.csv</span>]  
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_covariates_2022.csv</span>]  
 
 *Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*. 
 
-* **Number of variables/columns:** 74
+* **Number of variables/columns:** 119
 * **Number of observations/rows:** 3100 
 
 **Variable List:**
 
 This csv contains combined variables from the HFI and VEG raw data files ( 'OSM_LU01_LU13_LU15_LU21_HFI_2022.csv' & 'OSM_LU01_LU13_LU15_LU21_VEG_2022.csv'). Variable descriptions are the same as above except the variables names are in lowercase type and the HFI variables no longer contain the prefix 'FEATURE_TY'. 
+
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_covariates_2021.csv</span>]  
+
+*Information on exact methods for data extraction and more specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*. 
+
+* **Number of variables/columns:** 80
+* **Number of observations/rows:** 1560
+
+**Variable List:**
+
+This csv contains the same data as OSM_covariates_2022.csv (variables from the HFI and VEG raw data files) but for the 2021 data which was formatted in a separate github repository. 
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_covariates_merged_2021_2022.csv</span>]  
+
+* **Number of variables/columns:** 118
+* **Number of observations/rows:** 4660
+
+**Variable List:**
+
+This csv contains the combined data from <span style = "color: #7B0F17;">OSM_covariates_2022.csv</span> and <span style = "color: #7B0F17;">OSM_covariates_2021.csv</span>
+
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_covariates_grouped_2021_2022.csv</span>]  
+
+This csv contains data from <span style = "color: #7B0F17;">OSM_covariates_merged_2021_2022.csv</span>, where individual features have been grouped with similar features to simplify the number of potential variables and ensure enough data to use them in a modeling framework. Additionally, features not needed for the analysis or with too few data that could not be grouped, were removed. Grouped features are defined below, and the individual features that were included within each group are provided. 
+
+*Information on  specific variable descriptions can be found on the [ABMI human footprints wall to wall data download website for Year 2021](https://abmi.ca/home/data-analytics/da-top/da-product-overview/Human-Footprint-Products/HF-inventory.html)* **OR** *in the relevant_literature folder of this repository (HFI_2021_v1_0_Metadata_Final.pdf)*.  
+
+* **Number of variables/columns:** 19
+* **Number of observations/rows:** 4660
+
+**Variable List:**
+
+* <span style = "color: #2274A5;">**array**</span>, a factor with 6 levels where the first element abbreviation describes the project (e.g. OSM for Oil Sands Monitoring) and the second describes the landscape unit.  
+
+* <span style = "color: #2274A5;">**site**</span>, a factor with where the first element abbreviation describes the landscape unit and the second element describes the camera site.  
+
+* <span style = "color: #2274A5;">**buff_dist**</span>, a numeric measurement in meters ranging from 250 - 5000, of the buffer radius around the camera for which the proportion of associated human factors variables were calculated.  
+
+* <span style = "color: #2274A5;">**harvest**</span>, a numeric measurement representing the proportion of timber harvest within the buffer. Harvest is defined as, Areas where forestry operations have occurred (clear-cut, selective harvest, salvage logging, etc.) and includes, Harvest-area and Harvest-area-white-zone. 
+
+* <span style = "color: #2274A5;">**pipeline**</span>, a numeric measurement representing the proportion of pipelines within the buffer. Pipelines are defined as, a line of underground and overground pipes, of substantial length and capacity, used for the conveyance of petrochemicals. The physical clearing that contains underground and above-ground high pressure pipelines and were not grouped with any other variables.  
+
+* <span style = "color: #2274A5;">**roads**</span>, a numeric measurement representing the proportion of roads within the buffer. Roads are defined as, non-vegetated, impermeable surfaces used for motorized vehicle or aircraft transportation or access and includes, Airp-runway, Interchange-ramp,  Ris-airp-runway, Ris-road, Road-gravel-1L, Road-gravel-2L, Road-paved-1L, Road-paved-2L, Road-paved-3L, Road-paved-4L, Road-paved-5L, Road-paved-6L, Road-paved-7L, Road-paved-div, Road-paved-undiv-1L, Road-paved-undiv-2L, Road-unclassified, Road-unimproved, Road-unpaved-1L, Road-unpaved-2L, Road-winter, and Transfer station.  
+
+* <span style = "color: #2274A5;">**seismic_lines**</span>, a numeric measurement representing the proportion of seismic lines within the buffer. Seismic lines are defined as, cleared corridors created during hydrocarbon exploration with a 3-meter buffer (6-meter total width), and were not grouped with any other variables.  
+
+* <span style = "color: #2274A5;">**seismic_lines_3D**</span>, a numeric measurement representing the proportion of 3D seismic lines (also called low-impact seismic lines) within the buffer. 3D seismic lines are defined as, cleared corridors created during hydrocarbon exploration with a 1.5-meter buffer (3-meter total width), and were not grouped with any other variables.  
+
+* <span style = "color: #2274A5;">**trails**</span>, a numeric measurement representing the proportion of trails within the buffer. Trails are defined as, cleared corridors surfaced with dirt or low vegetation for human/vehicle access, and include Trail, and Truck-trail.  
+
+* <span style = "color: #2274A5;">**transmission_lines**</span>, a numeric measurement representing the proportion of transmission lines within the buffer. Transmission lines are defined as, cleared corridors designated for the location of power transmission line infrastructure, and include Transmission-line and Ris-transmission-line.  
+
+* <span style = "color: #2274A5;">**veg_edges**</span>, a numeric measurement representing the proportion of vegetated edges within the buffer. Vegetated edges are defined as, disturbed vegetation alongside road edges, railway edges including ditches, and other industrial features, and include Vegetated-edge-railways, Vegetated-edge-roads, and Surrounding-veg. 
+
+* <span style = "color: #2274A5;">**wells**</span>, a numeric measurement representing the proportion of wells within the buffer. Wells are defined as, ground cleared for an oil/gas well pad, and include Well-abandoned, Well-bitumen, Well-cased, Well-cleared-not-confirmed, Well-cleared-not-drilled, Well-gas, Well-oil, Well-other, and Well-unknown.   
+
+* <span style = "color: #2274A5;">**lc_grassland**</span>, a numeric measurement representing the proportion of grassland within the buffer. This was renamed from LC_class110 to be more informative and was not grouped with any other variables. 
+
+* <span style = "color: #2274A5;">**lc_coniferous**</span>, a numeric measurement representing the proportion of coniferous forest within the buffer. This was renamed from LC_class210 to be more informative and was not grouped with any other variables. 
+
+* <span style = "color: #2274A5;">**lc_broadleaf**</span>, a numeric measurement representing the proportion of broadleaf forest within the buffer. This was renamed from LC_class220 to be more informative and was not grouped with any other variables. 
+
+* <span style = "color: #2274A5;">**lc_mixed**</span>, a numeric measurement representing the proportion of mixed forest within the buffer. This was renamed from LC_class230 to be more informative and was not grouped with any other variables. 
+
+* <span style = "color: #2274A5;">**lc_developed**</span>, a numeric measurement representing the proportion of developed land within the buffer. This was renamed from LC_class34 to be more informative and was not grouped with any other variables. 
+
+* <span style = "color: #2274A5;">**lc_shrub**</span>, a numeric measurement representing the proportion of shrubland within the buffer. This was renamed from LC_class50 to be more informative and was not grouped with any other variables. 
+
+* <span style = "color: #2274A5;">**osm_industrial**</span>, a numeric measurement representing the proportion of various industrial features and clearings within the buffer. This includes, borrowpits (i.e., Borrowpit-dry, Borrowpit-wet, Borrowpits, Ris-borrowpits, Dugout, Lagoon, and Sump), clearings (i.e., Clearing-unknown,  Clearing-wellpad-unconfirmed, Ris-clearing, Ris-clearing-unknown, and Runway), facilities (i.e., Camp-industrial, Facility-other, Facility-unknown, Mill, Misc-oil-gas-facility, Oil-gas-plant, Ris-camp-industrial, Ris-facility-operations, Ris-facility-unknown, Ris-plant, Ris-tank-farm, Ris-utilities, and Urban-industrial), and mines (i.e., Grvl-sand-pit, Mines-oilsands, Mines-pitlake, Open-pit-mine, Peat, Ris-drainage, Ris-mines-oilsands, Ris-oilsands-rms, Ris-overburden-dump, Ris-reclaim-ready, Ris-soil-salvaged, Ris-tailing-pond, Ris-waste, and Tailing-pond).   
+
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_covariates_wide_2022.csv</span>]  
+
+* **Number of variables/columns:** 
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_deployment_2022.csv</span>]  
+
+* **Number of variables/columns:** 
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_glm_anthro_model_sel_data.csv</span>]  
+
+* **Number of variables/columns:** 
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_glm_global_model_sel_data.csv</span>]  
+
+* **Number of variables/columns:** 
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_glm_land_model_sel_data.csv</span>]  
+
+* **Number of variables/columns:** 
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_ind_det_2021.csv</span>]  
+
+This csv contains independent detections (images taken at least 30-min apart) for all species and sites during 2021.  
+
+* **Number of variables/columns:** 8
+* **Number of observations/rows:** 6696
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_ind_det_2022.csv</span>]  
+
+This csv contains independent detections (images taken at least 30-min apart) for all species and sites during 2022.  
+
+* **Number of variables/columns:** 8
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_proportional detections_2021.csv</span>]  
+
+This csv contains proportional monthly detection data for **selected species of interest** from all sites during 2021. There are columns for each species that total the number of months the species was detected, and columns that total the number of months the species was not detected - when these two columns are combined for each species that is used as our proportional binomial response variable.    
+
+* **Number of variables/columns:** 25
+* **Number of observations/rows:** 78
+
+**Variable List:**
+
+* <span style = "color: #2274A5;">**site**</span>, a factor with where the first element abbreviation describes the landscape unit and the second element describes the camera site.  
+
+* <span style = "color: #2274A5;">**black_bear - caribou**</span>, each of these columns is a numeric integer representing the number of months (when a camera was active for >=0.5 month) that a species was detected (controlling for hibernation months for black bears by removing Dec-March).  
+* <span style = "color: #2274A5;">**absent_black_bear - absent_caribou**</span>, each of these columns is a numeric integer representing the number of months (when a camera was active for >=0.5 month) that a species was **not** detected (controlling for hibernation months for black bears by removing Dec-March).  
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_proportional detections_2022.csv</span>]  
+
+This csv contains proportional monthly detection data for **selected species of interest** from all sites during 2022. There are columns for each species that total the number of months the species was detected, and columns that total the number of months the species was not detected - when these two columns are combined for each species that is used as our proportional binomial response variable.    
+
+* **Number of variables/columns:** 27
+* **Number of observations/rows:** 154
+
+**Variable List:**
+
+* <span style = "color: #2274A5;">**site**</span>, a factor with where the first element abbreviation describes the landscape unit and the second element describes the camera site.  
+
+* <span style = "color: #2274A5;">**black_bear - caribou**</span>, each of these columns is a numeric integer representing the number of months (when a camera was active for >=0.5 month) that a species was detected (controlling for hibernation months for black bears by removing Dec-March).  
+* <span style = "color: #2274A5;">**absent_black_bear - absent_caribou**</span>, each of these columns is a numeric integer representing the number of months (when a camera was active for >=0.5 month) that a species was **not** detected (controlling for hibernation months for black bears by removing Dec-March).  
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_timelapse_2021.csv</span>]  
+
+* **Number of variables/columns:** 
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_timelapse_2021.csv</span>]  
+
+* **Number of variables/columns:** 
+* **Number of observations/rows:** 
+
+**Variable List:**
+
+
+### DATA-SPECIFIC INFORMATION FOR: [<span style = "color: #7B0F17;">OSM_total_detections_2022.csv</span>]  
+
+This csv contains the total number of independent detections for all species and sites during 2022. 
+
+* **Number of variables/columns:** 40
+* **Number of observations/rows:** 155
+
+**Variable List:**
+
+* <span style = "color: #2274A5;">**site**</span>, a factor with where the first element abbreviation describes the landscape unit and the second element describes the camera site.  
+
+* <span style = "color: #2274A5;">**Blackbear - Canada goose*</span>, each of these columns is a numeric integer representing the number of independent detections (images taken at least 30-min apart) for each species at each site during the entire study period. 
+

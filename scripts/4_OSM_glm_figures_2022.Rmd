@@ -306,7 +306,7 @@ global_buffer_plot <- ggplot(buffer_data,
   coord_cartesian(ylim = c(0,4900)) +
   
   # make nicer labels
-  labs(y = 'Buffer width (meters)',
+  labs(y = 'Buffer size (meters)',
        x = 'Species') +
   
   # set theme
@@ -382,7 +382,7 @@ anthro_buffer_plot <- ggplot(buffer_data,
   coord_cartesian(ylim = c(0,4900)) +
   
   # make nicer labels
-  labs(y = 'Buffer width (meters)',
+  labs(y = 'Buffer size (meters)',
        x = 'Species') +
   
   # set theme
@@ -457,7 +457,7 @@ land_buffer_plot <- ggplot(buffer_data,
   coord_cartesian(ylim = c(0,4900)) +
   
   # make nicer labels
-  labs(y = 'Buffer width (meters)',
+  labs(y = 'Buffer size (meters)',
        x = 'Species') +
   
   # set theme
@@ -532,13 +532,13 @@ body_size_plot <- ggplot(body_size_data, aes(x = log_body_size,
                 size = 400) +
   
   labs(x = 'Log body size (kg)',
-       y = 'Buffer width (meters)') +
+       y = 'Buffer size (meters)') +
   
   # set theme
   theme_bw() +
   theme(panel.grid.minor = element_blank(),
-        axis.text = element_text(size = 14),
-        axis.title = element_text(size = 16))
+        axis.text = element_text(size = 16),
+        axis.title = element_text(size = 18))
 
 body_size_plot
 ```
@@ -596,7 +596,7 @@ figure_2_a <-
   
 # add annotation to figure
   annotate_figure(., 
-                  left = textGrob("Buffer width (meters)", 
+                  left = textGrob("Buffer size (meters)", 
                                   rot = 90, 
                                   vjust = 1,
                                   gp = gpar(cex = 1.5)))
@@ -673,7 +673,7 @@ ggplot(buffer_data_long, aes(x = species,
                     values = friendly_pal('contrast_three'),
                     labels = c('Anthropogenic', 'Global', 'Landscape')) +
   labs(x = 'Species',
-       y = 'Buffer width (meters)') +
+       y = 'Buffer size (meters)') +
   
   # set axis limits and breaks
   scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
@@ -757,7 +757,7 @@ ggplot(body_size_data_long, aes(x = log_body_size,
                     values = friendly_pal('contrast_three'),
                     labels = c('Anthropogenic', 'Global', 'Landscape')) +
   labs(x = 'Log body size (kg)',
-       y = 'Buffer width (meters)') +
+       y = 'Buffer size (meters)') +
   
   # set axis limits and breaks
   scale_y_continuous(breaks = seq(0, 5000, by = 500)) +
@@ -881,7 +881,7 @@ figs1 <-
   scale_x_continuous(breaks = seq(250, 5000, by= 250)) +
   
   # format axis labels
-  labs(x = 'Buffer width (meters)',
+  labs(x = 'Buffer size (meters)',
        y = 'Model weight',
        title = 'Global models') +
   
@@ -935,7 +935,7 @@ figs2 <-
   scale_x_continuous(breaks = seq(250, 5000, by= 250)) +
   
   # format axis labels
-  labs(x = 'Buffer width (meters)',
+  labs(x = 'Buffer size (meters)',
        y = 'Model weight',
        title = 'Anthropogenic models') +
   
@@ -975,7 +975,7 @@ figs3 <-
   scale_x_continuous(breaks = seq(250, 5000, by= 250)) +
   
   # format axis labels
-  labs(x = 'Buffer width (meters)',
+  labs(x = 'Buffer size (meters)',
        y = 'Model weight',
        title = 'Landscape models') +
   
